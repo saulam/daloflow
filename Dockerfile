@@ -73,25 +73,6 @@ RUN pip3 --no-cache-dir install \
     enum34
 
 
-## Compile and Install Tensorflow + Open MPI + Horovod
-# /usr/src/mpich
-# /usr/src/tensorflow
-# /usr/src/horovod
-
-RUN cd /usr/src/daloflow/tensorflow \
-    ./configure \
-    bazel build --config=opt //tensorflow/tools/pip_package:build_pip_package \
-    pip3 install /usr/src/tensorflow/tensorflow-*.whl
-
-RUN cd /usr/src/daloflow/mpich && \
-    ./configure --enable-orterun-prefix-by-default && \
-    make -j $(nproc) all && \
-    make install && \
-    ldconfig 
-
-#TODO: horovod
-
-
 # Install OpenSSH for MPI to communicate between containers
 RUN apt-get install -y --no-install-recommends openssh-client openssh-server && \
     mkdir -p /var/run/sshd
@@ -107,3 +88,5 @@ RUN apt-get install -y --no-install-recommends subversion && \
     rm -rf /examples/.svn
 
 WORKDIR "/examples"
+EXPOSE 22
+CMD ["/usr/sbin/sshd", "-D"]
