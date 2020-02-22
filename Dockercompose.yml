@@ -1,0 +1,14 @@
+version: "3.7"
+services:
+  daloflow:
+    container_name: daloflow
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    image: daloflow:latest
+    ports:
+      - "22:22"
+    volumes:
+      - type: bind
+        source: .
+        target: /usr/src/daloflow
