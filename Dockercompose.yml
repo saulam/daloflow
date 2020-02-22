@@ -6,9 +6,8 @@ services:
       context: ./
       dockerfile: ./Dockerfile
     image: daloflow:latest
-    ports:
-      - "22:22"
     volumes:
       - type: bind
         source: .
         target: /usr/src/daloflow
+    network_mode: host

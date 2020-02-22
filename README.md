@@ -17,14 +17,15 @@ Prepare docker image (1 time)
 Run docker (each time)
 * With docker compose:
   * docker-compose -f Dockercompose.yml up -d daloflow 
-  * docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' daloflow
     <work session>
   * docker-compose -f Dockercompose.yml down
 * With docker cli:
-  * docker run -v $(pwd):/usr/src/daloflow -it bash daloflow:0.1
+  * docker run --network host -v $(pwd):/usr/src/daloflow -it daloflow:0.1 bash
     <work session>
   * exit
 
 Within docker container (each time)
 * ./sources-build.sh
 
+Misc
+* docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' daloflow
