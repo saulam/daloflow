@@ -11,7 +11,9 @@ bazel build --config=opt //tensorflow/tools/pip_package:build_pip_package --acti
 pip3 install /usr/src/tensorflow/tensorflow-*.whl
 
 ## /usr/src/mpich (From Packed Source)
-cd /usr/src/daloflow/mpich
+cd /usr/src/daloflow/
+tar zxf mpich-3.3.2.tar.gz
+cd /usr/src/daloflow/mpich-3.3.2
 ./configure --enable-orterun-prefix-by-default --disable-fortran
 make -j $(nproc) all
 make install
