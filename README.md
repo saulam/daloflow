@@ -13,7 +13,9 @@ Work with project (each time)
 * exit
 
 Work session (each time)
-* ./sources-build.sh
+* ./mpich-build.sh		
+* ./tensorflow-build.sh
+* ./horovod-build.sh	
 
 
 Unsorted
