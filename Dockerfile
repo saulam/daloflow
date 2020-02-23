@@ -48,7 +48,7 @@ RUN apt-get update && apt-get install -y --allow-downgrades --allow-change-held-
 # Install bazel
 RUN curl https://bazel.build/bazel-release.pub.gpg | sudo apt-key add -
 RUN echo "deb [arch=amd64] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
-RUN sudo apt-get update && sudo apt-get install bazel
+RUN sudo apt-get update && sudo apt-get install bazel && apt-get install -y bazel-1.2.1
 
 
 # Install python software
