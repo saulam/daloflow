@@ -37,6 +37,7 @@ RUN apt-get update && apt-get install -y --allow-downgrades --allow-change-held-
         zlib1g-dev \
         virtualenv \
         autoconf \
+        libtool \
         swig \
         openjdk-8-jdk \
         openjdk-8-jre-headless \
