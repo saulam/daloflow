@@ -6,7 +6,7 @@ cd /usr/src/daloflow/horovod
 
 python3 setup.py clean
 python3 setup.py bdist_wheel
-pip3install ./dist/horovod-*.whl
+pip3 install ./dist/horovod-*.whl
 
 # Download examples
 apt-get install -y --no-install-recommends subversion && \
