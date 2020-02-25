@@ -34,6 +34,7 @@ RUN apt-get update && apt-get install -y --allow-downgrades --allow-change-held-
         gpg-agent \
         unzip \
         zip \
+        python-setuptools \
         zlib1g-dev \
         virtualenv \
         autoconf \

@@ -1,11 +1,11 @@
 #!/bin/bash
 set -x
 
-## /usr/src/horovod
-cd /usr/src/horovod
+## /usr/src/daloflow/horovod
+cd /usr/src/daloflow/horovod
 
-python setup.py clean
-python setup.py bdist_wheel
+python3 setup.py clean
+python3 setup.py bdist_wheel
 pip3install ./dist/horovod-*.whl
 
 # Download examples
