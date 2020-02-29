@@ -5,7 +5,7 @@ set -x
 cd /usr/src/daloflow/horovod
 
 python3 setup.py clean
-python3 setup.py bdist_wheel
+CFLAGS="-march=native -mavx -mavx2 -mfma -mfpmath=sse" HOROVOD_WITHOUT_PYTORCH=1 HOROVOD_WITHOUT_MXNET=1 python3 setup.py bdist_wheel
 pip3 install ./dist/horovod-*.whl
 
 # Download examples
