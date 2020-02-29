@@ -42,6 +42,7 @@ RUN apt-get update && apt-get install -y --allow-downgrades --allow-change-held-
         swig \
         openjdk-8-jdk \
         openjdk-8-jre-headless \
+        net-tools \
         && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*

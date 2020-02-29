@@ -26,7 +26,7 @@ Unsorted actions:
 * Run docker in docker:
   * docker run -v /var/run/docker.sock:/var/run/docker.sock <other options>
 * Run with docker compose:
-  * docker-compose -f Dockercompose.yml up -d daloflow 
+  * docker-compose -f Dockercompose.yml up -d
   * <work session>
   * docker-compose -f Dockercompose.yml down
 * Modify Dockerfile:
