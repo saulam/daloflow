@@ -9,7 +9,7 @@ set -x
 # execute cpi
 cd /usr/src/daloflow/mpich/examples
 mpicc -o cpi cpi.c
-mpirun -np 2 --hosts 172.18.0.3,172.18.0.2 $(pwd)/cpi
+mpirun -np 2 -machinefile /usr/src/daloflow/machines_mpi $(pwd)/cpi
 
 
 #
