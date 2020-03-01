@@ -76,16 +76,22 @@ RUN pip3 --no-cache-dir install \
     portpicker
 
 
-# Install OpenSSH for MPI to communicate between containers
-RUN apt-get install -y --no-install-recommends openssh-client openssh-server && \
-    mkdir -p /var/run/sshd
+# OpenSSH: Install for MPI to communicate between containers
+RUN apt-get install -y --no-install-recommends openssh-client openssh-server
+RUN mkdir -p /var/run/sshd
 
-# Allow OpenSSH to talk to containers without asking for confirmation
+# OpenSSH: Allow Root login
+RUN sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
+# OpenSSH: Allow to talk to containers without asking for confirmation
 RUN cat /etc/ssh/ssh_config | grep -v StrictHostKeyChecking > /etc/ssh/ssh_config.new && \
     echo "    StrictHostKeyChecking no" >> /etc/ssh/ssh_config.new && \
     mv /etc/ssh/ssh_config.new /etc/ssh/ssh_config
 
-
+# Initial env
+RUN echo 'root:daloflow' | chpasswd
 WORKDIR "/usr/src/daloflow"
+
 EXPOSE 22
 CMD ["/usr/sbin/sshd", "-D"]
+
