@@ -37,4 +37,6 @@ Unsorted actions:
 * Inspect:
   * docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' daloflow_node_1
   * docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' daloflow_node_2
+* Clean all images (warning):
+  * docker rmi -f $(docker images -q)
 
