@@ -88,6 +88,9 @@ RUN echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
 RUN cat /etc/ssh/ssh_config | grep -v StrictHostKeyChecking > /etc/ssh/ssh_config.new && \
     echo "    StrictHostKeyChecking no" >> /etc/ssh/ssh_config.new && \
     mv /etc/ssh/ssh_config.new /etc/ssh/ssh_config
+# OpenSSH: keygen
+RUN ssh-keygen -q -t rsa -N "" -f /root/.ssh/id_rsa
+RUN cp /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
 
 # Initial env
 RUN echo 'root:daloflow' | chpasswd

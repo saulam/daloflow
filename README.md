@@ -25,6 +25,7 @@ Actions:
 * Test example:
   * docker-compose -f Dockercompose.yml up -d --scale node=2
     * docker container exec -it daloflow_node_1 /bin/bash
+    * ./mpich-build.sh && ./tensorflow-build.sh && ./horovod-build.sh	
     * <work session>
     * exit
   * docker-compose -f Dockercompose.yml down
