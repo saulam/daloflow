@@ -24,20 +24,17 @@ Actions:
   * exit
 * Test example:
   * docker-compose -f Dockercompose.yml up -d --scale node=2
-  * docker container exec -it daloflow_node_1 ./daloflow-install.sh
-  * docker container exec -it daloflow_node_2 ./daloflow-install.sh
+  * for C in $(docker ps -q); do docker container exec -it $C ./daloflow-install.sh ; done
+  * docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(docker ps|grep daloflow_node|cut -f1 -d' ') > machines
   * Example of working session:
     * docker container exec -it daloflow_node_1 ./daloflow-test.sh
-    * docker container exec -it daloflow_node_1 mpirun -np 2 --hosts 172.18.0.3,172.18.0.2 /usr/src/daloflow/mpich/examples/cpi
+    * docker container exec -it daloflow_node_1 mpirun -np 2 -machinefile machines /usr/src/daloflow/mpich/examples/cpi
   * docker-compose -f Dockercompose.yml down
 
 
 Unsorted actions:
 * Run docker in docker:
   * docker run -v /var/run/docker.sock:/var/run/docker.sock <other options>
-* Inspect:
-  * docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' daloflow_node_1
-  * docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' daloflow_node_2
 * Clean all images (warning):
   * docker rmi -f $(docker images -q)
 
