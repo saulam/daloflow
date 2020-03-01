@@ -6,8 +6,7 @@ networks:
     driver: bridge
 
 services:
-  n0:
-    container_name: d0
+  node:
     build:
       context: ./
       dockerfile: ./Dockerfile
@@ -19,17 +18,3 @@ services:
    #network_mode: host
     networks:
       - b0
-  n1:
-    container_name: d1
-    build:
-      context: ./
-      dockerfile: ./Dockerfile
-    image: daloflow:latest
-    volumes:
-      - type: bind
-        source: .
-        target: /usr/src/daloflow
-   #network_mode: host
-    networks:
-      - b0
-

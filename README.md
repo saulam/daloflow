@@ -23,8 +23,8 @@ Actions:
   * ./horovod-build.sh	
   * exit
 * Test example:
-  * docker-compose -f Dockercompose.yml up -d
-    * docker container exec -it d0 /bin/bash
+  * docker-compose -f Dockercompose.yml up -d --scale node=2
+    * docker container exec -it daloflow_node_1 /bin/bash
     * <work session>
     * exit
   * docker-compose -f Dockercompose.yml down
@@ -34,6 +34,6 @@ Unsorted actions:
 * Run docker in docker:
   * docker run -v /var/run/docker.sock:/var/run/docker.sock <other options>
 * Inspect:
-  * docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' d0
-  * docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' d1
+  * docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' daloflow_node_1
+  * docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' daloflow_node_2
 
