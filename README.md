@@ -5,7 +5,7 @@ Data locality on Tensorflow.
 Scenario -> actions:
 * First time   -> Clone project + Build the image
 * Compile code -> Compile project
-* Test example -> Run project
+* Test example -> [Compile project] + Run project
 
 
 Actions:
@@ -24,10 +24,11 @@ Actions:
   * exit
 * Test example:
   * docker-compose -f Dockercompose.yml up -d --scale node=2
-    * docker container exec -it daloflow_node_1 /bin/bash
-    * ./mpich-build.sh && ./tensorflow-build.sh && ./horovod-build.sh	
-    * <work session>
-    * exit
+  * docker container exec -it daloflow_node_1 ./daloflow-install.sh
+  * docker container exec -it daloflow_node_2 ./daloflow-install.sh
+  * Example of working session:
+    * docker container exec -it daloflow_node_1 ./daloflow-test.sh
+    * docker container exec -it daloflow_node_1 mpirun -np 2 --hosts 172.18.0.3,172.18.0.2 /usr/src/daloflow/mpich/examples/cpi
   * docker-compose -f Dockercompose.yml down
 
 

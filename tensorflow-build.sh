@@ -8,5 +8,3 @@ bazel build --config=opt //tensorflow/tools/pip_package:build_pip_package --acti
 ./bazel-bin/tensorflow/tools/pip_package/build_pip_package /tmp/tensorflow_pkg
 pip3 install /tmp/tensorflow_pkg/tensorflow-*.whl
 
-cd /usr/src/daloflow/
-

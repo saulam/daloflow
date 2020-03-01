@@ -10,4 +10,3 @@ make -j $(nproc) all
 make install
 ldconfig 
 
-cd /usr/src/daloflow/
