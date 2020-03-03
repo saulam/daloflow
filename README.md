@@ -3,12 +3,15 @@ Data locality on Tensorflow.
 
 
 Scenario -> actions:
-* First time   -> Clone project + Build the image
+* First time   -> Pre-requisites + Clone project + Build the image
 * Compile code -> Compile project
 * Test example -> [Compile project] + Run project
 
 
 Actions:
+* Pre-requisites:
+  * install docker: https://www.hostinger.com/tutorials/how-to-install-and-use-docker-on-ubuntu/
+  * pip3 install docker-compose
 * Clone project:
   * git clone https://github.com/saulam/daloflow.git
   * git submodule update --init --recursive
@@ -30,6 +33,7 @@ Actions:
   * Example of working session:
     * docker container exec -it daloflow_node_1 ./daloflow-test.sh
     * docker container exec -it daloflow_node_1     mpirun           -np 2 -machinefile machines_mpi   /usr/src/daloflow/mpich/examples/cpi
+    * docker container exec -it daloflow_node_1     mpirun           -np 2 -machinefile machines_mpi -bind-to none -map-by slot python3 ./horovod/examples/tensorflow2_mnist.py
     * docker container exec -it daloflow_node_1 horovodrun --verbose -np 2 -hostfile machines_horovod  python3 ./horovod/examples/tensorflow2_mnist.py
   * docker-compose -f Dockercompose.yml down
 
@@ -39,4 +43,10 @@ Unsorted actions:
   * docker run -v /var/run/docker.sock:/var/run/docker.sock <other options>
 * Clean all images (warning):
   * docker rmi -f $(docker images -q)
+* Change daloflow path:
+  * find ./ -type f -exec sed -i 's/\/usr\/src\/daloflow/yourPath/g' {} \;
+
+
+ISSUES:
+* tensorflow-build.sh request python3 path (ignore the 'enviromental¡ configuration)
 
