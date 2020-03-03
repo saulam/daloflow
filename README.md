@@ -10,21 +10,33 @@ Scenario -> actions:
 
 Actions:
 * Pre-requisites:
-  * install docker: https://www.hostinger.com/tutorials/how-to-install-and-use-docker-on-ubuntu/
-  * pip3 install docker-compose
+  * Install Docker:
+    * sudo apt-get update
+    * sudo apt-get upgrade
+    * sudo apt-get install  curl apt-transport-https ca-certificates software-properties-common
+    * curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+    * sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+    * sudo apt-get update
+    * sudo apt install docker-ce
+  * Install Docker-Compose:
+    * pip3 install docker-compose
+
 * Clone project:
   * git clone https://github.com/saulam/daloflow.git
   * git submodule update --init --recursive
+
 * Build the image:
   * [edit Dockerfile if needed]
   * [update options if needed]
   * docker image build -t daloflow:1 .
+
 * Compile project:
   * docker run --network host -v $(pwd):/usr/src/daloflow -it daloflow:1 bash
   * ./mpich-build.sh		
   * ./tensorflow-build.sh
   * ./horovod-build.sh	
   * exit
+
 * Test example:
   * docker-compose -f Dockercompose.yml up -d --scale node=2
   * for C in $(docker ps -q); do docker container exec -it $C ./daloflow-install.sh ; done
