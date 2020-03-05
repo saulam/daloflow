@@ -3,9 +3,9 @@ Data locality on Tensorflow.
 
 
 Scenario -> actions:
-* First time   -> Pre-requisites + Clone project + Build the image
-* Compile code -> Compile project
-* Test example -> [Compile project] + Run project
+* First time      -> Pre-requisites + Clone project + Build the image
+* Compile code    -> [Start work session] +  Compile project                + [Stop work session]
+* Execute example -> [Start work session] + [Compile project] + Run example + [Stop work session]
 
 
 Actions:
@@ -30,19 +30,21 @@ Actions:
   * [update options if needed]
   * docker image build -t daloflow:1 .
 
-* Compile project:
+
+* Start work session:
   * ./daloflow-start.sh 2
-  * docker container exec -it daloflow_node_1 ./daloflow-build.sh
+
+* Stop work session:
   * ./daloflow-stop.sh
 
-* Test example:
-  * ./daloflow-start.sh 2
-  * Example of working session:
-    * docker container exec -it daloflow_node_1 ./daloflow-test.sh
-    * docker container exec -it daloflow_node_1     mpirun           -np 2 -machinefile machines_mpi   /usr/src/daloflow/mpich/examples/cpi
-    * docker container exec -it daloflow_node_1     mpirun           -np 2 -machinefile machines_mpi -bind-to none -map-by slot python3 ./horovod/examples/tensorflow2_mnist.py
-    * docker container exec -it daloflow_node_1 horovodrun --verbose -np 2 -hostfile machines_horovod  python3 ./horovod/examples/tensorflow2_mnist.py
-  * ./daloflow-stop.sh
+* Compile project:
+  * docker container exec -it daloflow_node_1 ./daloflow-build.sh
+
+* Run example (examples of possible executions):
+  * docker container exec -it daloflow_node_1 ./daloflow-test.sh
+  * docker container exec -it daloflow_node_1     mpirun           -np 2 -machinefile machines_mpi   /usr/src/daloflow/mpich/examples/cpi
+  * docker container exec -it daloflow_node_1     mpirun           -np 2 -machinefile machines_mpi -bind-to none -map-by slot python3 ./horovod/examples/tensorflow2_mnist.py
+  * docker container exec -it daloflow_node_1 horovodrun --verbose -np 2 -hostfile machines_horovod  python3 ./horovod/examples/tensorflow2_mnist.py
 
 
 Unsorted actions:
