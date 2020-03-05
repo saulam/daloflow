@@ -16,7 +16,7 @@ ldconfig
 #
 
 cd /usr/src/daloflow/tensorflow
-pip3 install /tmp/tensorflow_pkg/tensorflow-*.whl
+pip3 install /usr/src/daloflow/tensorflow/tensorflow_pkg/tensorflow-*.whl
 
 
 #

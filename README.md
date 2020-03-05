@@ -31,23 +31,18 @@ Actions:
   * docker image build -t daloflow:1 .
 
 * Compile project:
-  * docker run --network host -v $(pwd):/usr/src/daloflow -it daloflow:1 bash
-  * ./mpich-build.sh		
-  * ./tensorflow-build.sh
-  * ./horovod-build.sh	
-  * exit
+  * ./daloflow-start.sh 2
+  * docker container exec -it daloflow_node_1 ./daloflow-build.sh
+  * ./daloflow-stop.sh
 
 * Test example:
-  * docker-compose -f Dockercompose.yml up -d --scale node=2
-  * for C in $(docker ps -q); do docker container exec -it $C ./daloflow-install.sh ; done
-  * docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(docker ps|grep daloflow_node|cut -f1 -d' ') > machines_mpi
-  * docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(docker ps|grep daloflow_node|cut -f1 -d' ') | sed 's/.*/& slots=1/g' > machines_horovod
+  * ./daloflow-start.sh 2
   * Example of working session:
     * docker container exec -it daloflow_node_1 ./daloflow-test.sh
     * docker container exec -it daloflow_node_1     mpirun           -np 2 -machinefile machines_mpi   /usr/src/daloflow/mpich/examples/cpi
     * docker container exec -it daloflow_node_1     mpirun           -np 2 -machinefile machines_mpi -bind-to none -map-by slot python3 ./horovod/examples/tensorflow2_mnist.py
     * docker container exec -it daloflow_node_1 horovodrun --verbose -np 2 -hostfile machines_horovod  python3 ./horovod/examples/tensorflow2_mnist.py
-  * docker-compose -f Dockercompose.yml down
+  * ./daloflow-stop.sh
 
 
 Unsorted actions:
@@ -57,11 +52,16 @@ Unsorted actions:
   * docker rmi -f $(docker images -q)
 * Change daloflow path:
   * find ./ -type f -exec sed -i 's/\/usr\/src\/daloflow/yourPath/g' {} \;
+* Compile project:
+  * docker run --network host -v $(pwd):/usr/src/daloflow -it daloflow:1 bash
+  * ./mpich-build.sh		
+  * ./tensorflow-build.sh
+  * ./horovod-build.sh	
+  * exit
 
 
 ISSUES:
 * tensorflow-build.sh request python3 path (ignore the 'enviromental¡ configuration)
-* for C .... hacer que solo sean los docker del compose
 * compilar código y ejemplos de mpich, tensorflow, etc.
 
 
