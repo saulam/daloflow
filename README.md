@@ -61,4 +61,7 @@ Unsorted actions:
 
 ISSUES:
 * tensorflow-build.sh request python3 path (ignore the 'enviromental¡ configuration)
+* for C .... hacer que solo sean los docker del compose
+* compilar código y ejemplos de mpich, tensorflow, etc.
+
 
