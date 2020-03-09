@@ -113,11 +113,14 @@ ifeq ("$(NC)", "")
 else
 	# Start container cluster
 	docker-compose -f Dockercompose.yml up -d --scale node=$(NC)
+
 	# Install compiled software
 	for C in $(shell docker ps|grep daloflow_node|cut -f1 -d' '); do docker container exec -it $$C make install ; done
+
 	# Get network IP
-	docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CONTAINER_ID_LIST > machines_mpi
-	docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CONTAINER_ID_LIST | sed 's/.*/& slots=1/g' > machines_horovod
+	CONTAINER_ID_LIST="$(shell docker ps|grep daloflow_node|cut -f1 -d' ')" && \
+	docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $$CONTAINER_ID_LIST > machines_mpi && \
+	docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $$CONTAINER_ID_LIST | sed 's/.*/& slots=1/g' > machines_horovod
 endif
 
 
@@ -146,5 +149,4 @@ test:
 	#
 	mpirun -np 2 -machinefile machines_mpi -bind-to none -map-by slot python3 ./horovod/examples/tensorflow2_mnist.py
 	# horovodrun --verbose -np 2 -hostfile machines_horovod  python3 ./horovod/examples/tensorflow2_mnist.py
-
 
