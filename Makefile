@@ -1,3 +1,4 @@
+.ONESHELL:
 all: help
 
 
@@ -59,31 +60,24 @@ build:
 	@echo ""
 
 	# MPICH
-	cd /usr/src/daloflow/
-	tar zxf mpich-3.3.2.tar.gz
-	cd /usr/src/daloflow/mpich-3.3.2
-	#
-	./configure --enable-orterun-prefix-by-default --disable-fortran
-	make -j $(nproc) all
-	make install
-	ldconfig 
+	cd /usr/src/daloflow/ ; tar zxf mpich-3.3.2.tar.gz
+	cd /usr/src/daloflow/mpich-3.3.2 ; ./configure --enable-orterun-prefix-by-default --disable-fortran
+	cd /usr/src/daloflow/mpich-3.3.2 ; make -j $(nproc) all
+	cd /usr/src/daloflow/mpich-3.3.2 ; make install
+	cd /usr/src/daloflow/mpich-3.3.2 ; ldconfig 
 
 	# TENSORFLOW
-	cd /usr/src/daloflow/tensorflow
-	# ./configure
 	export PYTHON_BIN_PATH=`which python3`
-	yes "" | $PYTHON_BIN_PATH configure.py
+	cd /usr/src/daloflow/tensorflow ; yes "" | $PYTHON_BIN_PATH configure.py
 	# build
-	bazel build --config=opt //tensorflow/tools/pip_package:build_pip_package --action_env PYTHON_BIN_PATH=/usr/bin/python3 
-	./bazel-bin/tensorflow/tools/pip_package/build_pip_package /usr/src/daloflow/tensorflow/tensorflow_pkg
-	pip3 install /usr/src/daloflow/tensorflow/tensorflow_pkg/tensorflow-*.whl
+	cd /usr/src/daloflow/tensorflow ; bazel build --config=opt //tensorflow/tools/pip_package:build_pip_package --action_env PYTHON_BIN_PATH=/usr/bin/python3 
+	cd /usr/src/daloflow/tensorflow ; ./bazel-bin/tensorflow/tools/pip_package/build_pip_package /usr/src/daloflow/tensorflow/tensorflow_pkg
+	cd /usr/src/daloflow/tensorflow ; pip3 install /usr/src/daloflow/tensorflow/tensorflow_pkg/tensorflow-*.whl
 
 	# HOROVOD
-	cd /usr/src/daloflow/horovod
-	#
-	python3 setup.py clean
-	CFLAGS="-march=native -mavx -mavx2 -mfma -mfpmath=sse" python3 setup.py bdist_wheel
-	pip3 install ./dist/horovod-*.whl
+	cd /usr/src/daloflow/horovod ; python3 setup.py clean
+	cd /usr/src/daloflow/horovod ; CFLAGS="-march=native -mavx -mavx2 -mfma -mfpmath=sse" python3 setup.py bdist_wheel
+	cd /usr/src/daloflow/horovod ; pip3 install ./dist/horovod-*.whl
 
 
 install:
@@ -92,17 +86,14 @@ install:
 	@echo ""
 
 	# MPICH
-	cd /usr/src/daloflow/mpich-3.3.2
-	make install
-	ldconfig 
+	cd /usr/src/daloflow/mpich-3.3.2 ; make install
+	cd /usr/src/daloflow/mpich-3.3.2 ; ldconfig 
 
 	# TENSORFLOW
-	cd /usr/src/daloflow/tensorflow
-	pip3 install /usr/src/daloflow/tensorflow/tensorflow_pkg/tensorflow-*.whl
+	cd /usr/src/daloflow/tensorflow ; pip3 install /usr/src/daloflow/tensorflow/tensorflow_pkg/tensorflow-*.whl
 
 	# HOROVOD
-	cd /usr/src/daloflow/horovod
-	pip3 install ./dist/horovod-*.whl
+	cd /usr/src/daloflow/horovod ; pip3 install ./dist/horovod-*.whl
 
 
 start:
@@ -116,14 +107,10 @@ ifeq ("$(NC)", "")
 	exit
 else
 	# Start container cluster
-	docker-compose -f Dockercompose.yml up -d --scale node=$(NC)
-
-	# Setup container cluster
-	CONTAINER_ID_LIST=$(docker ps|grep daloflow_node|cut -f1 -d' ')
-	for C in $CONTAINER_ID_LIST; do 
-		docker container exec -it $C ./daloflow-install.sh ; 
-	done
-
+	##docker-compose -f Dockercompose.yml up -d --scale node=$(NC)
+	# Install compiled software
+	for C in $(shell docker ps|grep daloflow_node|cut -f1 -d' '); do docker container exec -it $$C make install ; done
+	# Get network IP
 	docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CONTAINER_ID_LIST > machines_mpi
 	docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CONTAINER_ID_LIST | sed 's/.*/& slots=1/g' > machines_horovod
 endif
@@ -146,9 +133,8 @@ test:
 	#
 	# MPICH
 	#
-	cd /usr/src/daloflow/mpich/examples
-	mpicc -o cpi cpi.c
-	mpirun -np 2 -machinefile /usr/src/daloflow/machines_mpi $(pwd)/cpi
+	cd /usr/src/daloflow/mpich/examples ; mpicc -o cpi cpi.c
+	mpirun -np 2 -machinefile /usr/src/daloflow/machines_mpi /usr/src/daloflow/mpich/examples/cpi
 	#
 	# HOROVOD
 	#
