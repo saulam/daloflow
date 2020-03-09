@@ -14,6 +14,7 @@ First time:
 Work session:
 * Start work session:
   * make start NC=2
+  * make prepare
 * [when source is modified] Compile project:
   * docker container exec -it daloflow_node_1 make build
 * Run example (examples of possible executions):

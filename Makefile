@@ -124,6 +124,16 @@ else
 endif
 
 
+prepare:
+	# Install compiled software
+	for C in $(shell docker ps|grep daloflow_node|cut -f1 -d' '); do docker container exec -it $$C make install ; done
+
+	# Get network IP
+	CONTAINER_ID_LIST="$(shell docker ps|grep daloflow_node|cut -f1 -d' ')" && \
+	docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $$CONTAINER_ID_LIST > machines_mpi && \
+	docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $$CONTAINER_ID_LIST | sed 's/.*/& slots=1/g' > machines_horovod
+
+
 stop:
 	@echo ""
 	@echo "stop..."
