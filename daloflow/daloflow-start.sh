@@ -26,7 +26,7 @@ docker-compose -f Dockercompose.yml up -d --scale node=$1
 CONTAINER_ID_LIST=$(docker ps|grep daloflow_node|cut -f1 -d' ')
 
 for C in $CONTAINER_ID_LIST; do 
-	docker container exec -it $C ./daloflow-install.sh ; 
+	docker container exec -it $C ./daloflow/daloflow-install.sh ; 
 done
 
 docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CONTAINER_ID_LIST > machines_mpi
