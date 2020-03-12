@@ -6,8 +6,6 @@ set -x
 # MPICH
 #
 
-cd /usr/src/daloflow/
-tar zxf mpich-3.3.2.tar.gz
 cd /usr/src/daloflow/mpich-3.3.2
 
 ./configure --enable-orterun-prefix-by-default --disable-fortran
@@ -22,7 +20,8 @@ ldconfig
 
 cd /usr/src/daloflow/tensorflow
 
-./configure
+export PYTHON_BIN_PATH=`which python3` && \
+yes "" | $PYTHON_BIN_PATH configure.py
 bazel build --config=opt //tensorflow/tools/pip_package:build_pip_package --action_env PYTHON_BIN_PATH=/usr/bin/python3 
 ./bazel-bin/tensorflow/tools/pip_package/build_pip_package /usr/src/daloflow/tensorflow/tensorflow_pkg
 pip3 install /usr/src/daloflow/tensorflow/tensorflow_pkg/tensorflow-*.whl

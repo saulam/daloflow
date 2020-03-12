@@ -43,6 +43,7 @@ clone:
 	@echo ""
 
 	git clone https://github.com/saulam/daloflow.git
+	cd daloflow
 	git submodule update --init --recursive
 
 
