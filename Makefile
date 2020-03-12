@@ -4,7 +4,7 @@ all: help
 
 help:
 	@echo ""
-	@echo "daloflow 0.5"
+	@echo "daloflow 0.8"
 	@echo "------------"
 	@echo ""
 	@echo ": first time"
@@ -60,8 +60,6 @@ build:
 	@echo ""
 
 	# MPICH
-	cd /usr/src/daloflow/ && tar zxf mpich-3.3.2.tar.gz
-
 	cd /usr/src/daloflow/mpich-3.3.2 && \
 	./configure --enable-orterun-prefix-by-default --disable-fortran && \
 	make -j $(nproc) all && \
@@ -132,6 +130,5 @@ test:
 	#
 	# HOROVOD
 	#
-	mpirun -np 2 -machinefile machines_mpi -bind-to none -map-by slot python3 ./horovod/examples/tensorflow2_mnist.py
-	# horovodrun --verbose -np 2 -hostfile machines_horovod  python3 ./horovod/examples/tensorflow2_mnist.py
+	mpirun -np 2 -machinefile machines_mpi -bind-to none -map-by slot python3 /usr/src/daloflow/horovod/examples/tensorflow2_mnist.py
 

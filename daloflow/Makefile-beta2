@@ -4,7 +4,7 @@ all: help
 
 help:
 	@echo ""
-	@echo "daloflow 0.5"
+	@echo "daloflow 0.8"
 	@echo "------------"
 	@echo ""
 	@echo ": first time"
@@ -60,8 +60,6 @@ build:
 	@echo ""
 
 	# MPICH
-	cd /usr/src/daloflow/ && tar zxf mpich-3.3.2.tar.gz
-
 	cd /usr/src/daloflow/mpich-3.3.2 && \
 	./configure --enable-orterun-prefix-by-default --disable-fortran && \
 	make -j $(nproc) all && \
@@ -106,32 +104,7 @@ start:
 	@echo "start..."
 	@echo ""
 
-	# Check NP
-ifeq ("$(NC)", "")
-	@echo "Usage: make start NC=<number of node in the cluster>"
-	exit
-else
-	# Start container cluster
-	docker-compose -f Dockercompose.yml up -d --scale node=$(NC)
-
-	# Install compiled software
-	for C in $(shell docker ps|grep daloflow_node|cut -f1 -d' '); do docker container exec -it $$C make install ; done
-
-	# Get network IP
-	CONTAINER_ID_LIST="$(shell docker ps|grep daloflow_node|cut -f1 -d' ')" && \
-	docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $$CONTAINER_ID_LIST > machines_mpi && \
-	docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $$CONTAINER_ID_LIST | sed 's/.*/& slots=1/g' > machines_horovod
-endif
-
-
-prepare:
-	# Install compiled software
-	for C in $(shell docker ps|grep daloflow_node|cut -f1 -d' '); do docker container exec -it $$C make install ; done
-
-	# Get network IP
-	CONTAINER_ID_LIST="$(shell docker ps|grep daloflow_node|cut -f1 -d' ')" && \
-	docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $$CONTAINER_ID_LIST > machines_mpi && \
-	docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $$CONTAINER_ID_LIST | sed 's/.*/& slots=1/g' > machines_horovod
+	./daloflow/daloflow-start.sh $(NC)
 
 
 stop:
@@ -157,6 +130,5 @@ test:
 	#
 	# HOROVOD
 	#
-	mpirun -np 2 -machinefile machines_mpi -bind-to none -map-by slot python3 ./horovod/examples/tensorflow2_mnist.py
-	# horovodrun --verbose -np 2 -hostfile machines_horovod  python3 ./horovod/examples/tensorflow2_mnist.py
+	mpirun -np 2 -machinefile machines_mpi -bind-to none -map-by slot python3 /usr/src/daloflow/horovod/examples/tensorflow2_mnist.py
 
