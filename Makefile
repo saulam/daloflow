@@ -63,7 +63,7 @@ build:
 	@echo ""
 
 	# MPICH
-	cd /usr/src/daloflow/mpich-3.3.2 && \
+	cd /usr/src/daloflow/mpich && \
 	./configure --enable-orterun-prefix-by-default --disable-fortran && \
 	make -j $(nproc) all && \
 	make install && \
@@ -90,7 +90,7 @@ install:
 	@echo ""
 
 	# MPICH
-	cd /usr/src/daloflow/mpich-3.3.2 && \
+	cd /usr/src/daloflow/mpich && \
 	make install && ldconfig
 
 	# TENSORFLOW

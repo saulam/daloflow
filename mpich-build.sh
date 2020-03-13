@@ -1,13 +1,13 @@
 #!/bin/bash
 set -x
 
-cd /usr/src/daloflow/mpich-3.3.2
+cd /usr/src/daloflow/mpich
 
 ./configure --enable-orterun-prefix-by-default --disable-fortran
 make -j $(nproc) all
 make install
 ldconfig 
 
-cd /usr/src/daloflow/mpich-3.3.2/examples
+cd /usr/src/daloflow/mpich/examples
 make -j $(nproc) all
 

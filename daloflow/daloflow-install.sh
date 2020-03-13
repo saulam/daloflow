@@ -6,7 +6,7 @@ set -x
 # MPICH
 #
 
-cd /usr/src/daloflow/mpich-3.3.2
+cd /usr/src/daloflow/mpich
 make install
 ldconfig 
 
