@@ -4,18 +4,18 @@ all: help
 
 help:
 	@echo ""
-	@echo "daloflow 0.8"
-	@echo "------------"
+	@echo "  daloflow 1.0"
+	@echo " --------------"
 	@echo ""
-	@echo ": first time"
-	@echo "make prerequisites"
-	@echo "make clone"
-	@echo "make image"
+	@echo ": Available options for first time deployment:"
+	@echo "  make prerequisites"
+	@echo "  make clone"
+	@echo "  make image"
 	@echo ""
-	@echo ": work session"
-	@echo "make start NC=<number of nodes>"
-	@echo "make build"
-	@echo "make stop"
+	@echo ": Available options for a work session:"
+	@echo "  make start nc=<number of nodes>"
+	@echo "  make build"
+	@echo "  make stop"
 	@echo ""
 	@echo ": Please read the README.md file for more information"
 	@echo ""
@@ -72,7 +72,7 @@ build:
 	# TENSORFLOW
 	cd /usr/src/daloflow/tensorflow && \
 	export PYTHON_BIN_PATH=`which python3` && \
-	yes "" | $PYTHON_BIN_PATH configure.py && \
+	yes "" | $(which python3) configure.py && \
 	bazel build --config=opt //tensorflow/tools/pip_package:build_pip_package --action_env PYTHON_BIN_PATH=/usr/bin/python3 && \
 	./bazel-bin/tensorflow/tools/pip_package/build_pip_package /usr/src/daloflow/tensorflow/tensorflow_pkg && \
 	pip3 install /usr/src/daloflow/tensorflow/tensorflow_pkg/tensorflow-*.whl
@@ -107,7 +107,7 @@ start:
 	@echo "start..."
 	@echo ""
 
-	./daloflow/daloflow-start.sh $(NC)
+	./daloflow/daloflow-start.sh $(nc)
 
 
 stop:
