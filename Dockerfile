@@ -56,7 +56,7 @@ RUN sudo apt-get update && sudo apt-get install bazel && apt-get install -y baze
 # (begin) install bazel 0.26.1 for tensorflow 2.0.1
 RUN wget https://github.com/bazelbuild/bazel/releases/download/0.26.1/bazel-0.26.1-linux-x86_64
 RUN chmod a+x bazel-0.26.1-linux-x86_64
-RUN bazel-0.26.1-linux-x86_64 /usr/bin/bazel
+RUN mv bazel-0.26.1-linux-x86_64 /usr/bin/bazel
 # (end)   install bazel 0.26.1 for tensorflow 2.0.1
 
 
