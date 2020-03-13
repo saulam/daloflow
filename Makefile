@@ -17,6 +17,8 @@ help:
 	@echo "make build"
 	@echo "make stop"
 	@echo ""
+	@echo ": Please read the README.md file for more information"
+	@echo ""
 
 
 prerequisites:
