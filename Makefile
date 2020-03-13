@@ -14,10 +14,13 @@ help:
 	@echo ""
 	@echo ": Available options for a work session:"
 	@echo "  make start nc=<number of nodes>"
-	@echo "  make build"
 	@echo "  make stop"
 	@echo ""
-	@echo ": Please read the README.md file for more information"
+	@echo ": Please read the README.md file for more information."
+	@echo "  make build"
+	@echo "  make test"
+	@echo "  make download"
+	@echo "  make mpirun a=\"python3 ./horovod/examples/tensorflow2_mnist.py\""
 	@echo ""
 
 
@@ -110,6 +113,17 @@ start:
 	./daloflow/daloflow-start.sh $(nc)
 
 
+mpirun:
+	@echo ""
+	@echo "mpirun..."
+	@echo ""
+
+	# Please execute:
+	@echo ""
+	@echo "docker container exec -it daloflow_node_1 mpirun -np 2 -machinefile machines_mpi -bind-to none -map-by slot $(a)"
+	@echo ""
+
+
 stop:
 	@echo ""
 	@echo "stop..."
@@ -134,4 +148,15 @@ test:
 	# HOROVOD
 	#
 	mpirun -np 2 -machinefile machines_mpi -bind-to none -map-by slot python3 /usr/src/daloflow/horovod/examples/tensorflow2_mnist.py
+
+
+download:
+	@echo ""
+	@echo "download..."
+	@echo ""
+
+	# Download original source code
+	wget https://github.com/tensorflow/tensorflow/archive/v2.0.1.tar.gz
+	wget http://www.mpich.org/static/downloads/3.3.2/mpich-3.3.2.tar.gz
+	wget https://github.com/horovod/horovod/archive/v0.19.0.tar.gz
 
