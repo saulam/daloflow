@@ -7,3 +7,6 @@
 [submodule "mpich"]
 	path = mpich
 	url = https://github.com/pmodels/mpich.git
+[submodule "docker-hadoop"]
+	path = docker-hadoop
+	url = https://github.com/big-data-europe/docker-hadoop.git
