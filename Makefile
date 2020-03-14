@@ -12,15 +12,18 @@ help:
 	@echo "  make clone"
 	@echo "  make image"
 	@echo ""
-	@echo ": Available options for a work session:"
-	@echo "  make start nc=<number of nodes>"
+	@echo ": Available options for session management:"
+	@echo "  make start nc=<number of container>"
 	@echo "  make status"
 	@echo "  make stop"
 	@echo ""
-	@echo ": Please read the README.md file for more information."
+	@echo ": Available options in a typical work session:"
 	@echo "  make build"
 	@echo "  make test"
-	@echo "  make mpirun np=\"2\" a=\"python3 ./horovod/examples/tensorflow2_mnist.py\""
+	@echo "  make mpirun np=2 a=\"python3 ./horovod/examples/tensorflow2_mnist.py\""
+	@echo "  make bash c=<id container, from 1 up to nc>"
+	@echo ""
+	@echo ": Please read the README.md file for more information."
 	@echo ""
 
 
@@ -129,5 +132,16 @@ test:
 	# MPICH
 	#
 	docker container exec -it daloflow_node_1 ./daloflow/daloflow-test.sh
+
+
+bash:
+	@echo ""
+	@echo "bash..."
+	@echo ""
+
+	#
+	# bash
+	#
+	docker container exec -it daloflow_node_$(c) /bin/bash
 
 
