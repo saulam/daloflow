@@ -3,11 +3,7 @@ Data locality on Tensorflow.
 
 
 ISSUES:
-* tensorflow-build.sh ask interactively
-  * yes "" | $PYTHON_BIN_PATH configure.py
-* compilar código y ejemplos de mpich, tensorflow, etc.
-  * mpich-build.sh incluye compilaci'on de ejemplos
-
+* make build que haga el docker exec.... "make build" actual
 
 Unsorted actions:
 * Run docker in docker:
