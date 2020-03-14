@@ -20,7 +20,7 @@ help:
 	@echo ": Please read the README.md file for more information."
 	@echo "  make build"
 	@echo "  make test"
-	@echo "  make mpirun a=\"python3 ./horovod/examples/tensorflow2_mnist.py\""
+	@echo "  make mpirun np=\"2\" a=\"python3 ./horovod/examples/tensorflow2_mnist.py\""
 	@echo ""
 
 
@@ -80,44 +80,7 @@ build:
 	@echo "build..."
 	@echo ""
 
-	# MPICH
-	cd /usr/src/daloflow/mpich && \
-	./configure --enable-orterun-prefix-by-default --disable-fortran && \
-	make -j $(nproc) all && \
-	make install && \
-	ldconfig 
-
-	# TENSORFLOW
-	cd /usr/src/daloflow/tensorflow && \
-	export PYTHON_BIN_PATH=`which python3` && \
-	yes "" | $(which python3) configure.py && \
-	bazel build --config=opt //tensorflow/tools/pip_package:build_pip_package --action_env PYTHON_BIN_PATH=/usr/bin/python3 && \
-	./bazel-bin/tensorflow/tools/pip_package/build_pip_package /usr/src/daloflow/tensorflow/tensorflow_pkg && \
-	pip3 install /usr/src/daloflow/tensorflow/tensorflow_pkg/tensorflow-*.whl
-
-	# HOROVOD
-	cd /usr/src/daloflow/horovod && \
-	python3 setup.py clean && \
-	CFLAGS="-march=native -mavx -mavx2 -mfma -mfpmath=sse" python3 setup.py bdist_wheel && \
-	pip3 install ./dist/horovod-*.whl
-
-
-install:
-	@echo ""
-	@echo "install..."
-	@echo ""
-
-	# MPICH
-	cd /usr/src/daloflow/mpich && \
-	make install && ldconfig
-
-	# TENSORFLOW
-	cd /usr/src/daloflow/tensorflow && \
-	pip3 install /usr/src/daloflow/tensorflow/tensorflow_pkg/tensorflow-*.whl
-
-	# HOROVOD
-	cd /usr/src/daloflow/horovod && \
-	pip3 install ./dist/horovod-*.whl
+	./daloflow/daloflow-build.sh
 
 
 start:
@@ -144,7 +107,7 @@ mpirun:
 
 	# Please execute:
 	@echo ""
-	@echo "docker container exec -it daloflow_node_1 mpirun -np 2 -machinefile machines_mpi -bind-to none -map-by slot $(a)"
+	docker container exec -it daloflow_node_1 mpirun -np $(np) -machinefile machines_mpi -bind-to none -map-by slot $(a)
 	@echo ""
 
 
@@ -165,11 +128,6 @@ test:
 	#
 	# MPICH
 	#
-	cd /usr/src/daloflow/mpich/examples ; mpicc -o cpi cpi.c
-	mpirun -np 2 -machinefile /usr/src/daloflow/machines_mpi /usr/src/daloflow/mpich/examples/cpi
+	docker container exec -it daloflow_node_1 ./daloflow/daloflow-test.sh
 
-	#
-	# HOROVOD
-	#
-	mpirun -np 2 -machinefile machines_mpi -bind-to none -map-by slot python3 /usr/src/daloflow/horovod/examples/tensorflow2_mnist.py
 

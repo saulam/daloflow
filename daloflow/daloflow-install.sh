@@ -3,26 +3,12 @@ set -x
 
 
 #
-# MPICH
+# Install each node
 #
 
-cd /usr/src/daloflow/mpich
-make install
-ldconfig 
+CONTAINER_ID_LIST=$(docker ps|grep daloflow_node|cut -f1 -d' ')
 
-
-#
-# TENSORFLOW
-#
-
-cd /usr/src/daloflow/tensorflow
-pip3 install /usr/src/daloflow/tensorflow/tensorflow_pkg/tensorflow-*.whl
-
-
-#
-# HOROVOD
-#
-
-cd /usr/src/daloflow/horovod
-pip3 install ./dist/horovod-*.whl
+for C in $CONTAINER_ID_LIST; do
+	docker container exec -it $C ./daloflow/daloflow-install-node.sh ;
+done
 

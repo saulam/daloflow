@@ -2,8 +2,8 @@
 Data locality on Tensorflow.
 
 
-ISSUES:
-* make build que haga el docker exec.... "make build" actual
+OPEN ISSUES:
+* solve unresolved symbol
 
 Unsorted actions:
 * Run docker in docker:
