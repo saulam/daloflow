@@ -35,6 +35,8 @@ daloflow_prerequisites ()
 	sudo apt-get upgrade
 	sudo apt-get install curl apt-transport-https ca-certificates software-properties-common
 	curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+        curl https://bazel.build/bazel-release.pub.gpg | sudo apt-key add -
+	sudo apt-get update
 	sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 	sudo apt-get update
 	sudo apt install docker-ce docker-ce-cli containerd.io
@@ -73,10 +75,12 @@ daloflow_build_node ()
 	./mpich-build.sh
 
 	# TENSORFLOW
-        ./tensorflow-build.sh
+        #./tensorflow-build.sh
+        pip3 install ./daloflow/tensorflow-2.0.1-cp36-cp36m-linux_x86_64.whl
 
 	# HOROVOD
-	./horovod-build.sh
+	#./horovod-build.sh
+	pip3 install ./daloflow/horovod-0.19.0-cp36-cp36m-linux_x86_64.whl
 }
 
 daloflow_build ()
