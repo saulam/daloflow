@@ -1,7 +1,6 @@
 
-#ARG UBUNTU_VERSION=18.04
-#FROM ubuntu:${UBUNTU_VERSION} AS base
-FROM horovod/horovod:0.20.0-tf2.3.0-torch1.6.0-mxnet1.5.0-py3.7-cpu AS base
+ARG UBUNTU_VERSION=18.04
+FROM ubuntu:${UBUNTU_VERSION} AS base
 
 # Install initial software
 RUN apt-get update && apt-get install -y --allow-downgrades --allow-change-held-packages --no-install-recommends \
