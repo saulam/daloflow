@@ -13,7 +13,7 @@ services:
     image: daloflow:latest
     volumes:
       - type: bind
-        source: /raid/monsals/daloflow
+        source: $BASE_HOME
         target: /usr/src/daloflow
    #network_mode: host
     networks:

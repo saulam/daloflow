@@ -102,6 +102,8 @@ daloflow_start ()
 
 	# Start container cluster
 	docker-compose -f Dockercompose.yml up -d --scale node=$NC
+	echo "wating $NC seconds..."
+	sleep $NC
 
 	# Setup container cluster
 	CONTAINER_ID_LIST=$(docker ps|grep daloflow_node|cut -f1 -d' ')

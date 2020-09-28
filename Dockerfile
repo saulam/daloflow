@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y --allow-downgrades --allow-change-held-
         python3 \
         python3-dev \
         python3-pip \
+        python3-setuptools \
         librdmacm1 \
         libibverbs1 \
         ibverbs-providers \
@@ -34,7 +35,6 @@ RUN apt-get update && apt-get install -y --allow-downgrades --allow-change-held-
         gpg-agent \
         unzip \
         zip \
-        python-setuptools \
         zlib1g-dev \
         virtualenv \
         autoconf \
@@ -62,6 +62,7 @@ RUN mv bazel-0.26.1-linux-x86_64 /usr/bin/bazel
 
 # Install python software
 RUN pip3 --no-cache-dir install \
+    setuptools \
     Pillow \
     h5py \
     wheel \
@@ -72,7 +73,6 @@ RUN pip3 --no-cache-dir install \
     numpy \
     scipy \
     pandas \
-    setuptools \
     mock \
     enum34
 

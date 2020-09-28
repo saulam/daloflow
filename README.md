@@ -3,21 +3,24 @@ Data locality on Tensorflow.
 
 First time:
 * Pre-requisites:
-  * make prerequisites
+  * ./daloflow.sh prerequisites
 * Clone project:
-  * make clone
+  * ./daloflow.sh clone
 * Build the image:
   * [update Dockerfile if needed]
-  * make image
+  * ./daloflow.sh image
 
 Work session:
 * Start work session:
-  * make start nc=2
-* [when source is modified] Compile project:
-  * docker container exec -it daloflow_node_1 make build
+  * ./daloflow.sh start <number of container>
+* [when tensorflow or horovod source code is modified] Compile the new binary:
+  * ./daloflow.sh build
 * Run example (examples of possible executions):
-  * docker container exec -it daloflow_node_1 mpirun -np 2 -machinefile machines_mpi -bind-to none -map-by slot python3 ./horovod/examples/tensorflow2_mnist.py
+  * ./daloflow.sh mpirun <np> "python3 ./horovod/examples/tensorflow2_mnist.py"
+* [when some debug if needed] Test
+  * ./daloflow.sh status
+  * ./daloflow.sh test
+  * ./daloflow.sh bash <id container, from 1 up to nc>
 * [when not longer be used] Stop work session:
-  * make stop
-
+  * ./daloflow.sh stop
 
