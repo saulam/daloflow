@@ -1,6 +1,4 @@
 
-#ARG UBUNTU_VERSION=18.04
-#FROM ubuntu:${UBUNTU_VERSION} AS base
 FROM horovod/horovod:0.20.0-tf2.3.0-torch1.6.0-mxnet1.5.0-py3.7-cpu AS base
 
 # Install initial software
@@ -48,40 +46,6 @@ RUN apt-get update && apt-get install -y --allow-downgrades --allow-change-held-
     rm -rf /var/lib/apt/lists/*
 
 
-# Install bazel
-RUN curl https://bazel.build/bazel-release.pub.gpg | sudo apt-key add -
-RUN echo "deb [arch=amd64] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
-RUN sudo apt-get update && sudo apt-get install bazel && apt-get install -y bazel-1.2.1
-
-# (begin) install bazel 0.26.1 for tensorflow 2.0.1
-RUN wget https://github.com/bazelbuild/bazel/releases/download/0.26.1/bazel-0.26.1-linux-x86_64
-RUN chmod a+x bazel-0.26.1-linux-x86_64
-RUN mv bazel-0.26.1-linux-x86_64 /usr/bin/bazel
-# (end)   install bazel 0.26.1 for tensorflow 2.0.1
-
-
-# Install python software
-RUN pip3 --no-cache-dir install \
-    setuptools \
-    Pillow \
-    h5py \
-    wheel \
-    typing \
-    keras_preprocessing \
-    matplotlib \
-    mock \
-    numpy \
-    scipy \
-    pandas \
-    mock \
-    enum34
-
-RUN pip3 --no-cache-dir install \
-    sklearn \
-    future \
-    portpicker
-
-
 # OpenSSH: Install for MPI to communicate between containers
 RUN apt-get install -y --no-install-recommends openssh-client openssh-server
 RUN mkdir -p /var/run/sshd
@@ -97,6 +61,7 @@ RUN cat /etc/ssh/ssh_config | grep -v StrictHostKeyChecking > /etc/ssh/ssh_confi
 # OpenSSH: keygen
 RUN ssh-keygen -q -t rsa -N "" -f /root/.ssh/id_rsa
 RUN cp /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
+
 
 # Initial env
 RUN echo 'root:daloflow' | chpasswd
