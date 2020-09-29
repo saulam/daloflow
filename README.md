@@ -13,7 +13,6 @@ First time:
 Work session:
 * Start work session:
   * ./daloflow.sh start <number of container>
-* [when tensorflow or horovod source code is modified] Compile the new binary:
   * ./daloflow.sh build
 * Run example (examples of possible executions):
   * ./daloflow.sh mpirun <np> "python3 ./horovod/examples/tensorflow2_mnist.py"
