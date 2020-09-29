@@ -51,7 +51,6 @@ daloflow_clone ()
 
 	git clone https://github.com/saulam/daloflow.git
 	cd daloflow
-	#git submodule update --init --recursive
 
 	# MPI
 	wget http://www.mpich.org/static/downloads/3.3.2/mpich-3.3.2.tar.gz
@@ -72,15 +71,18 @@ daloflow_clone ()
 daloflow_build_node ()
 {
 	# MPICH
+	# from source # ./mpich-build.sh
 	./mpich-build.sh
 
 	# TENSORFLOW
-        #./tensorflow-build.sh
+        # from source # ./tensorflow-build.sh
+        # from wheel  # pip3 install ./daloflow/tensorflow-2.0.1-cp36-cp36m-linux_x86_64.whl
         pip3 install ./daloflow/tensorflow-2.0.1-cp36-cp36m-linux_x86_64.whl
 
 	# HOROVOD
-	#./horovod-build.sh
-	pip3 install ./daloflow/horovod-0.19.0-cp36-cp36m-linux_x86_64.whl
+	# from source #./horovod-build.sh
+	# from wheel  # HOROVOD_WITH_MPI=1 HOROVOD_WITH_TENSORFLOW=1 pip3 install ./daloflow/horovod-0.19.0-cp36-cp36m-linux_x86_64.whl
+	HOROVOD_WITH_MPI=1 HOROVOD_WITH_TENSORFLOW=1 pip3 install --no-cache-dir horovod
 }
 
 daloflow_build ()
