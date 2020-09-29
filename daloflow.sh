@@ -51,7 +51,7 @@ daloflow_clone ()
 
 	git clone https://github.com/saulam/daloflow.git
 	cd daloflow
-	git submodule update --init --recursive
+	#git submodule update --init --recursive
 
 	# MPI
 	wget http://www.mpich.org/static/downloads/3.3.2/mpich-3.3.2.tar.gz
