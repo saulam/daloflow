@@ -17,6 +17,7 @@ Work session:
 * Start work session:
   * ./daloflow.sh start <number of container>
 * Run your applications. For example:
+  * ./daloflow.sh mpirun <np> "python3 ./horovod/examples/tensorflow2_keras_mnist.py"
   * ./daloflow.sh mpirun <np> "python3 ./horovod/examples/tensorflow2_mnist.py"
   * ...
 * Stop work session:
