@@ -5,52 +5,33 @@
 daloflow_help ()
 {
 	echo ""
-	echo "  daloflow 1.2"
+	echo "  daloflow 1.5"
 	echo " --------------"
 	echo ""
-	echo ": Available options for first time deployment:"
+	echo ": For first time deployment, please execute:"
+	echo "  $0 postclone"
 	echo "  $0 prerequisites"
-	echo "  $0 clone"
 	echo "  $0 image"
 	echo ""
-	echo ": Available options for session management:"
+	echo ": For a typical work session, please execute:"
 	echo "  $0 start <number of container>"
-	echo "  $0 status"
+	echo "  $0 mpirun <number of processes> \"python3 ./horovod/examples/tensorflow2_mnist.py\""
+	echo "  ..."
 	echo "  $0 stop"
 	echo ""
-	echo ": Available options in a typical work session:"
-	echo "  $0 build"
+	echo ": Available options for debugging:"
+	echo "  $0 status"
 	echo "  $0 test"
-	echo "  $0 mpirun <np> \"python3 ./horovod/examples/tensorflow2_mnist.py\""
 	echo "  $0 bash <id container, from 1 up to nc>"
 	echo ""
 	echo ": Please read the README.md file for more information."
 	echo ""
 }
 
-daloflow_prerequisites ()
+
+daloflow_postclone ()
 {
-	# DOCKER
-	sudo apt-get update
-	sudo apt-get upgrade
-	sudo apt-get install curl apt-transport-https ca-certificates software-properties-common
-	curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-        curl https://bazel.build/bazel-release.pub.gpg | sudo apt-key add -
-	sudo apt-get update
-	sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-	sudo apt-get update
-	sudo apt install docker-ce docker-ce-cli containerd.io
-
-	# DOCKER-COMPOSER
-	pip3 install docker-compose
-}
-
-daloflow_clone ()
-{
-	echo "clone daloflow and download mpich 332 and tensorflow 201..."
-
-	git clone https://github.com/saulam/daloflow.git
-	cd daloflow
+	echo "Downloading mpich 3.3.2, tensorflow 2.0.1, and Horovod 0.19.0..."
 
 	# MPI
 	wget http://www.mpich.org/static/downloads/3.3.2/mpich-3.3.2.tar.gz
@@ -66,6 +47,40 @@ daloflow_clone ()
 
 	# HOROVOD
 	wget https://github.com/horovod/horovod/archive/v0.19.0.tar.gz
+	tar zxf v0.19.0.tar.gz
+	mv horovod-0.19.0 horovod
+}
+
+daloflow_prerequisites ()
+{
+	echo "Installing Docker and Docker-compose..."
+
+	# To Install DOCKER
+	sudo apt-get update
+	sudo apt-get upgrade
+	sudo apt-get install -y curl apt-transport-https ca-certificates software-properties-common
+	curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+        curl https://bazel.build/bazel-release.pub.gpg | sudo apt-key add -
+	sudo apt-get update
+	sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+	sudo apt-get update
+	sudo apt install -y docker-ce docker-ce-cli containerd.io
+
+	# To Install DOCKER-COMPOSER
+	pip3 install docker-compose
+}
+
+daloflow_image ()
+{
+	echo "Building initial image..."
+	docker image build -t daloflow:v1 .
+
+	echo "Building compilation image..."
+	daloflow_start 1
+        daloflow_build
+	CONTAINER_ID_LIST=$(docker ps|grep daloflow_node|cut -f1 -d' ')
+	docker commit $CONTAINER_ID_LIST daloflow:latest
+	daloflow_stop
 }
 
 daloflow_build_node ()
@@ -145,11 +160,11 @@ do
 	     prerequisites)
 		daloflow_prerequisites
 	     ;;
-	     clone)
-		daloflow_clone
+	     postclone)
+		daloflow_postclone
 	     ;;
 	     image)
-		docker image build -t daloflow:1 .
+		daloflow_image
 	     ;;
 	     build)
 		daloflow_build
