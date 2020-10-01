@@ -80,7 +80,7 @@ daloflow_image ()
         daloflow_build
 	CONTAINER_ID_LIST=$(docker ps|grep daloflow_node|cut -f1 -d' ')
 	docker commit $CONTAINER_ID_LIST daloflow:latest
-	daloflow_stop
+	docker-compose -f Dockercompose.yml down
 }
 
 daloflow_build_node ()
