@@ -1,18 +1,21 @@
 # daloflow
-Data locality on Tensorflow.
+DAta LOcality on tensorFLOW.
 
 First time:
+* To clone from github
+  * git clone https://github.com/saulam/daloflow.git
+* Postclone project:
+  * cd daloflow
+  * chmod +x ./daloflow.sh
+  * ./daloflow.sh postclone
 * Pre-requisites:
   * ./daloflow.sh prerequisites
-* Clone project:
-  * ./daloflow.sh clone
-* Build the image (from Dockerfile):
+* Build the docker image:
   * ./daloflow.sh image
 
 Work session:
 * Start work session:
   * ./daloflow.sh start <number of container>
-  * ./daloflow.sh build
 * Run your applications. For example:
   * ./daloflow.sh mpirun <np> "python3 ./horovod/examples/tensorflow2_mnist.py"
   * ...
