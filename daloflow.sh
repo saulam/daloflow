@@ -216,11 +216,13 @@ do
 		daloflow_test
 	     ;;
 	     save)
+		echo "Saving image..."
 	        IMAGE_ID_LIST=$(docker image ls|grep daloflow|grep latest|awk '{print $3}')
-		docker save -o daloflow_v2.tar $IMAGE_ID_LIST
+		docker image save daloflow:latest | gzip -5 > daloflow_v2.tgz 
 	     ;;
 	     load)
-		docker load -i daloflow_v2.tar
+		echo "Loading image..."
+		cat daloflow_v2.tgz | gunzip - | docker image load
 	     ;;
 
 	     *)
