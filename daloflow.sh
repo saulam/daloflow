@@ -24,6 +24,8 @@ daloflow_help ()
 	echo "  $0 status"
 	echo "  $0 test"
 	echo "  $0 bash <id container, from 1 up to nc>"
+	echo "  $0 save"
+	echo "  $0 load"
 	echo ""
 	echo ": Please read the README.md file for more information."
 	echo ""
@@ -69,6 +71,15 @@ daloflow_prerequisites ()
 
 	# To Install DOCKER-COMPOSER
 	pip3 install docker-compose
+
+	# NVIDIA GPU: https://nvidia.github.io/nvidia-container-runtime/
+	curl -s -L https://nvidia.github.io/nvidia-container-runtime/gpgkey | sudo apt-key add -
+	distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+	curl -s -L https://nvidia.github.io/nvidia-container-runtime/$distribution/nvidia-container-runtime.list | \
+		  sudo tee /etc/apt/sources.list.d/nvidia-container-runtime.list
+	sudo apt-get update
+	apt-get install -y nvidia-container-runtime
+        docker run -it --rm --gpus all ubuntu nvidia-smi
 }
 
 daloflow_image ()
@@ -203,6 +214,13 @@ do
 	     ;;
 	     test_node)
 		daloflow_test
+	     ;;
+	     save)
+	        IMAGE_ID_LIST=$(docker image ls|grep daloflow|grep latest|awk '{print $3}')
+		docker save -o daloflow_v2.tar $IMAGE_ID_LIST
+	     ;;
+	     load)
+		docker load -i daloflow_v2.tar
 	     ;;
 
 	     *)
