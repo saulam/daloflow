@@ -1,0 +1,19 @@
+
+version: "3.8"
+
+services:
+  node:
+    image: daloflow:latest
+    volumes:
+      - type: bind
+        source: /raid/monsals/daloflow
+        target: /usr/src/daloflow
+    networks:
+      - backend
+
+networks:
+  backend:
+    ipam:
+      config:
+        - subnet: 192.168.0.0/16
+
