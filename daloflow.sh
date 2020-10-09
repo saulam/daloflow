@@ -1,5 +1,5 @@
 #!/bin/bash
-#set -x
+set -x
 
 
 daloflow_help ()
@@ -142,8 +142,7 @@ daloflow_start ()
 	sleep $NC
 
 	# Setup container cluster
-	CONTAINER_ID_LIST=$(docker ps|grep daloflow_node|cut -f1 -d' ')
-
+	CONTAINER_ID_LIST=$(docker ps -f name=daloflow -q)
 	docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CONTAINER_ID_LIST > machines_mpi
 	docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CONTAINER_ID_LIST | sed 's/.*/& slots=1/g' > machines_horovod
 }
@@ -174,8 +173,8 @@ daloflow_swarm_start ()
         docker service scale daloflow_node=$NC
 
         # Setup container cluster
-        CONTAINER_NAME=$(docker service ps daloflow_node | awk '{ print $1 }' | grep -v ID)
-        docker inspect -f '{{range .NetworksAttachments}}{{.Addresses}}{{end}}' $CONTAINER_NAME | sed "s/^\[//g" | awk 'BEGIN {FS="/"} ; {print $1}' > machines_mpi
+        CONTAINER_ID_LIST=$(docker service ps daloflow_node -f desired-state=running -q)
+        docker inspect -f '{{range .NetworksAttachments}}{{.Addresses}}{{end}}' $CONTAINER_ID_LIST | sed "s/^\[//g" | awk 'BEGIN {FS="/"} ; {print $1}' > machines_mpi
         cat machines_mpi | sed 's/.*/& slots=1/g' > machines_horovod
 }
 
