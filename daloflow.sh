@@ -237,6 +237,8 @@ do
 	     ;;
 	     stop)
 		docker-compose -f Dockercompose.yml down
+	        rm -fr machines_mpi
+	        rm -fr machines_horovod
 	     ;;
 
 	     # multinode node
@@ -249,11 +251,13 @@ do
 		NP=$1
 		shift
 		A=$1
-		CNAME=$(docker ps -f name=daloflow -q)
+		CNAME=$(docker ps -f name=daloflow -q | head -1)
 		docker container exec -it $CNAME mpirun -np $NP -machinefile machines_mpi -bind-to none -map-by slot $A
 	     ;;
 	     swarm-stop)
                 docker service rm daloflow_node
+	        rm -fr machines_mpi
+	        rm -fr machines_horovod
 	     ;;
 
 	     # single node utilities
@@ -262,7 +266,8 @@ do
 	     ;;
 	     bash)
 		shift
-		docker container exec -it daloflow_node_$1 /bin/bash
+		CIP=$(head -$1 machines_mpi | tail -1)
+		docker container exec -it $(docker ps -f name=daloflow -q | head -1) /usr/bin/ssh $CIP
 	     ;;
 	     test)
 		docker container exec -it daloflow_node_1 ./daloflow.sh test_node
