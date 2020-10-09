@@ -5,7 +5,7 @@
 daloflow_help ()
 {
 	echo ""
-	echo "  daloflow 1.5"
+	echo "  daloflow 3.0"
 	echo " --------------"
 	echo ""
 	echo ": For first time deployment, please execute:"
@@ -13,14 +13,20 @@ daloflow_help ()
 	echo "  $0 prerequisites"
 	echo "  $0 image"
 	echo ""
-	echo ": For a typical work session, please execute:"
+	echo ": For a typical single node work session, please execute:"
 	echo "  $0 start <number of container>"
 	echo "  $0 mpirun <np> \"python3 ./horovod/examples/tensorflow2_keras_mnist.py\""
 	echo "  $0 mpirun <np> \"python3 ./horovod/examples/tensorflow2_mnist.py\""
 	echo "  ..."
 	echo "  $0 stop"
 	echo ""
-	echo ": Available options for debugging:"
+	echo ": For a typical multinode work session, please execute:"
+	echo "  $0 swarm-start <number of container>"
+	echo "  $0 swarm-mpirun <np> \"python3 ./horovod/examples/tensorflow2_keras_mnist.py\""
+	echo "  ..."
+	echo "  $0 swarm-stop"
+	echo ""
+	echo ": Available options for (single node) debugging:"
 	echo "  $0 status"
 	echo "  $0 test"
 	echo "  $0 bash <id container, from 1 up to nc>"
@@ -156,6 +162,24 @@ daloflow_test ()
 	# horovodrun --verbose -np 2 -hostfile machines_horovod  python3 ./horovod/examples/tensorflow2_mnist.py
 }
 
+daloflow_swarm_start ()
+{
+        # Setup number of containers
+        NC=$1
+        if [ $# -lt 1 ]; then
+             NC=1
+        fi
+
+        # Start container cluster
+        docker stack deploy --compose-file Dockerstack.yml daloflow
+        docker service scale daloflow_node=$NC
+
+        # Setup container cluster
+        CONTAINER_NAME=$(docker service ps daloflow_node | awk '{ print $1 }' | grep -v ID)
+        docker inspect -f '{{range .NetworksAttachments}}{{.Addresses}}{{end}}' $CONTAINER_NAME | sed "s/^\[//g" | awk 'BEGIN {FS="/"} ; {print $1}' > machines_mpi
+        cat machines_mpi | sed 's/.*/& slots=1/g' > machines_horovod
+}
+
 
 #
 # Main
@@ -171,12 +195,15 @@ fi
 while (( "$#" )); 
 do
 	case $1 in
+	     # first execution
 	     prerequisites)
 		daloflow_prerequisites
 	     ;;
 	     postclone)
 		daloflow_postclone
 	     ;;
+
+	     # image
 	     image)
 		daloflow_image
 	     ;;
@@ -185,35 +212,6 @@ do
 	     ;;
 	     build_node)
 		daloflow_build_node
-	     ;;
-
-	     start)
-		shift
-		daloflow_start $1
-	     ;;
-	     status|ps)
-		docker ps
-	     ;;
-	     stop)
-		docker-compose -f Dockercompose.yml down
-	     ;;
-
-	     bash)
-		shift
-		docker container exec -it daloflow_node_$1 /bin/bash
-	     ;;
-	     mpirun)
-		shift
-		NP=$1
-		shift
-		A=$1
-		docker container exec -it daloflow_node_1 mpirun -np $NP -machinefile machines_mpi -bind-to none -map-by slot $A
-	     ;;
-	     test)
-		docker container exec -it daloflow_node_1 ./daloflow.sh test_node
-	     ;;
-	     test_node)
-		daloflow_test
 	     ;;
 	     save)
 		echo "Saving image..."
@@ -225,6 +223,55 @@ do
 		cat daloflow_v2.tgz | gunzip - | docker image load
 	     ;;
 
+	     # single node
+	     start)
+		shift
+		daloflow_start $1
+	     ;;
+	     mpirun)
+		shift
+		NP=$1
+		shift
+		A=$1
+		CNAME="daloflow_node_1"
+		docker container exec -it $CNAME mpirun -np $NP -machinefile machines_mpi -bind-to none -map-by slot $A
+	     ;;
+	     stop)
+		docker-compose -f Dockercompose.yml down
+	     ;;
+
+	     # multinode node
+	     swarm-start)
+		shift
+		daloflow_swarm_start $1
+	     ;;
+	     swarm-mpirun)
+		shift
+		NP=$1
+		shift
+		A=$1
+		CNAME=$(docker ps -f name=daloflow -q)
+		docker container exec -it $CNAME mpirun -np $NP -machinefile machines_mpi -bind-to none -map-by slot $A
+	     swarm-stop)
+                docker service rm daloflow_node
+	     ;;
+
+	     # single node utilities
+	     status|ps)
+		docker ps
+	     ;;
+	     bash)
+		shift
+		docker container exec -it daloflow_node_$1 /bin/bash
+	     ;;
+	     test)
+		docker container exec -it daloflow_node_1 ./daloflow.sh test_node
+	     ;;
+	     test_node)
+		daloflow_test
+	     ;;
+
+	     # help
 	     *)
 		daloflow_help $0
 	     ;;
