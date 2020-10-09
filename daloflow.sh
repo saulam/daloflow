@@ -16,7 +16,6 @@ daloflow_help ()
 	echo ": For a typical single node work session, please execute:"
 	echo "  $0 start <number of container>"
 	echo "  $0 mpirun <np> \"python3 ./horovod/examples/tensorflow2_keras_mnist.py\""
-	echo "  $0 mpirun <np> \"python3 ./horovod/examples/tensorflow2_mnist.py\""
 	echo "  ..."
 	echo "  $0 stop"
 	echo ""

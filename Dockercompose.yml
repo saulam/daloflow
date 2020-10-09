@@ -1,9 +1,4 @@
-
 version: "3.8"
-
-networks:
-  b0:
-    driver: bridge
 
 services:
   node:
@@ -13,8 +8,15 @@ services:
     image: daloflow:latest
     volumes:
       - type: bind
-        source: $BASE_HOME
+        source: /raid/monsals/daloflow
         target: /usr/src/daloflow
-   #network_mode: host
     networks:
-      - b0
+      - backend
+
+networks:
+  backend:
+    driver: bridge
+    #ipam:
+    #  config:
+    #    - subnet: 192.168.0.0/16
+
