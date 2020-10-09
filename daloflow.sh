@@ -252,6 +252,7 @@ do
 		A=$1
 		CNAME=$(docker ps -f name=daloflow -q)
 		docker container exec -it $CNAME mpirun -np $NP -machinefile machines_mpi -bind-to none -map-by slot $A
+	     ;;
 	     swarm-stop)
                 docker service rm daloflow_node
 	     ;;
