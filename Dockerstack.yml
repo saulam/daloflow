@@ -3,12 +3,17 @@ version: "3.8"
 
 services:
   node:
-    build:
-      context: ./
-      dockerfile: ./Dockerfile
     image: daloflow:v2
     volumes:
       - type: bind
         source: /mnt/local-storage/daloflow
         target: /usr/src/daloflow
+    networks:
+      - backend
+
+networks:
+  backend:
+    ipam:
+      config:
+        - subnet: 192.168.0.0/16
 
