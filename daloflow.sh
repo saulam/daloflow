@@ -21,7 +21,7 @@ daloflow_help ()
 	echo ""
 	echo ": For a typical multinode work session, please execute:"
 	echo "  $0 swarm-start <number of container>"
-	echo "  $0 swarm-mpirun <np> \"python3 ./horovod/examples/tensorflow2_keras_mnist.py\""
+	echo "  $0 mpirun <np> \"python3 ./horovod/examples/tensorflow2_keras_mnist.py\""
 	echo "  ..."
 	echo "  $0 swarm-stop"
 	echo ""
@@ -136,12 +136,12 @@ daloflow_start ()
 	     NC=1
 	fi
 
-	# Start container cluster
+	# Start container cluster (in single node)
 	docker-compose -f Dockercompose.yml up -d --scale node=$NC
 	echo "wating $NC seconds..."
 	sleep $NC
 
-	# Setup container cluster
+	# Setup container cluster (in single node)
 	CONTAINER_ID_LIST=$(docker ps -f name=daloflow -q)
 	docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CONTAINER_ID_LIST > machines_mpi
 	docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CONTAINER_ID_LIST | sed 's/.*/& slots=1/g' > machines_horovod
@@ -255,7 +255,8 @@ do
 	     bash)
 		shift
 		CIP=$(head -$1 machines_mpi | tail -1)
-		docker container exec -it $(docker ps -f name=daloflow -q | head -1) /usr/bin/ssh $CIP
+		CNAME=$(docker ps -f name=daloflow -q | head -1)
+		docker container exec -it $CNAME /usr/bin/ssh $CIP
 	     ;;
 
 	     # single node utilities
@@ -263,7 +264,8 @@ do
 		docker ps
 	     ;;
 	     test)
-		docker container exec -it daloflow_node_1 ./daloflow.sh test_node
+		CNAME=$(docker ps -f name=daloflow -q | head -1)
+		docker container exec -it $CNAME ./daloflow.sh test_node
 	     ;;
 	     test_node)
 		daloflow_test
