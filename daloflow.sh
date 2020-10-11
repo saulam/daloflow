@@ -37,6 +37,10 @@ daloflow_help ()
 }
 
 
+#
+# Installation
+#
+
 daloflow_postclone ()
 {
 	echo "Downloading mpich 3.3.2, tensorflow 2.0.1, and Horovod 0.19.0..."
@@ -87,19 +91,34 @@ daloflow_prerequisites ()
         docker run -it --rm --gpus all ubuntu nvidia-smi
 }
 
+
+#
+# Image
+#
+
 daloflow_image ()
 {
 	echo "Building initial image..."
 	docker image build -t daloflow:v1 .
-
 	echo "BASE_HOME=$(pwd)" > .env
 
 	echo "Building compilation image..."
 	daloflow_start 1
         daloflow_build
+
+	echo "Commiting image..."
 	CONTAINER_ID_LIST=$(docker ps|grep daloflow_node|cut -f1 -d' ')
 	docker commit $CONTAINER_ID_LIST daloflow:latest
 	docker-compose -f Dockercompose.yml down
+}
+
+daloflow_build ()
+{
+	# Install each node
+	CONTAINER_ID_LIST=$(docker ps|grep daloflow_node|cut -f1 -d' ')
+	for C in $CONTAINER_ID_LIST; do
+		docker container exec -it $C ./daloflow.sh build_node 
+	done
 }
 
 daloflow_build_node ()
@@ -119,14 +138,23 @@ daloflow_build_node ()
 	HOROVOD_WITH_MPI=1 HOROVOD_WITH_TENSORFLOW=1 pip3 install --no-cache-dir horovod
 }
 
-daloflow_build ()
+daloflow_save ()
 {
-	# Install each node
-	CONTAINER_ID_LIST=$(docker ps|grep daloflow_node|cut -f1 -d' ')
-	for C in $CONTAINER_ID_LIST; do
-		docker container exec -it $C ./daloflow.sh build_node 
-	done
+	echo "Saving image..."
+	IMAGE_ID_LIST=$(docker image ls|grep daloflow|grep latest|awk '{print $3}')
+	docker image save daloflow:latest | gzip -5 > daloflow_v2.tgz 
 }
+
+daloflow_load ()
+{
+	echo "Loading image..."
+	cat daloflow_v2.tgz | gunzip - | docker image load
+}
+
+
+#
+# Execution
+#
 
 daloflow_start ()
 {
@@ -147,19 +175,6 @@ daloflow_start ()
 	docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CONTAINER_ID_LIST | sed 's/.*/& slots=1/g' > machines_horovod
 }
 
-daloflow_test ()
-{
-	# MPICH
-	# execute cpi
-	cd /usr/src/daloflow/mpich/examples
-	mpicc -o cpi cpi.c
-	mpirun -np 2 -machinefile /usr/src/daloflow/machines_mpi $(pwd)/cpi
-
-	# HOROVOD
-	mpirun -np 2 -machinefile machines_mpi -bind-to none -map-by slot python3 ./horovod/examples/tensorflow2_mnist.py
-	# horovodrun --verbose -np 2 -hostfile machines_horovod  python3 ./horovod/examples/tensorflow2_mnist.py
-}
-
 daloflow_swarm_start ()
 {
         # Setup number of containers
@@ -176,6 +191,28 @@ daloflow_swarm_start ()
         CONTAINER_ID_LIST=$(docker service ps daloflow_node -f desired-state=running -q)
         docker inspect -f '{{range .NetworksAttachments}}{{.Addresses}}{{end}}' $CONTAINER_ID_LIST | sed "s/^\[//g" | awk 'BEGIN {FS="/"} ; {print $1}' > machines_mpi
         cat machines_mpi | sed 's/.*/& slots=1/g' > machines_horovod
+}
+
+daloflow_test ()
+{
+	# Install each node
+	CONTAINER_ID_LIST=$(docker ps -f name=daloflow -q)
+	for C in $CONTAINER_ID_LIST; do
+		docker container exec -it $C ./daloflow.sh test_node 
+	done
+}
+
+daloflow_test_node ()
+{
+	# MPICH
+	# execute cpi
+	cd /usr/src/daloflow/mpich/examples
+	mpicc -o cpi cpi.c
+	mpirun -np 2 -machinefile /usr/src/daloflow/machines_mpi $(pwd)/cpi
+
+	# HOROVOD
+	mpirun -np 2 -machinefile machines_mpi -bind-to none -map-by slot python3 ./horovod/examples/tensorflow2_mnist.py
+	# horovodrun --verbose -np 2 -hostfile machines_horovod  python3 ./horovod/examples/tensorflow2_mnist.py
 }
 
 
@@ -212,13 +249,10 @@ do
 		daloflow_build_node
 	     ;;
 	     save)
-		echo "Saving image..."
-	        IMAGE_ID_LIST=$(docker image ls|grep daloflow|grep latest|awk '{print $3}')
-		docker image save daloflow:latest | gzip -5 > daloflow_v2.tgz 
+                daloflow_save
 	     ;;
 	     load)
-		echo "Loading image..."
-		cat daloflow_v2.tgz | gunzip - | docker image load
+                daloflow_load
 	     ;;
 
 	     # single node
@@ -264,11 +298,10 @@ do
 		docker ps
 	     ;;
 	     test)
-		CNAME=$(docker ps -f name=daloflow -q | head -1)
-		docker container exec -it $CNAME ./daloflow.sh test_node
+		daloflow_test
 	     ;;
 	     test_node)
-		daloflow_test
+		daloflow_test_node
 	     ;;
 
 	     # help
