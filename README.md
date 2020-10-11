@@ -8,20 +8,26 @@ First time:
   * cd daloflow
   * chmod +x ./daloflow.sh
   * ./daloflow.sh postclone
-* Pre-requisites:
+* Pre-requisites (if docker + docker-compose is not installed):
   * ./daloflow.sh prerequisites
 * Build the docker image:
   * ./daloflow.sh image
 
-Work session:
+Work session (in a single node):
 * Start work session:
-  * ./daloflow.sh start <number of container>
+  * Single node:
+    * ./daloflow.sh start <number of containers>
+  * Several nodes:
+    * ./daloflow.sh swarm-start <number of containers>
 * Run your applications. For example:
   * ./daloflow.sh mpirun <np> "python3 ./horovod/examples/tensorflow2_keras_mnist.py"
   * ./daloflow.sh mpirun <np> "python3 ./horovod/examples/tensorflow2_mnist.py"
   * ...
 * Stop work session:
-  * ./daloflow.sh stop
+  * Single node:
+    * ./daloflow.sh stop
+  * Several nodes:
+    * ./daloflow.sh swarm-stop
 
 Some options for debugging:
 * ./daloflow.sh status
