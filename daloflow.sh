@@ -26,11 +26,9 @@ daloflow_help ()
 	echo "  $0 swarm-stop"
 	echo ""
 	echo ": Available options for (single node) debugging:"
-	echo "  $0 status"
-	echo "  $0 test"
 	echo "  $0 bash <id container, from 1 up to nc>"
-	echo "  $0 save"
-	echo "  $0 load"
+	echo "  $0 docker_in_docker"
+	echo "  $0 save | load | status | test"
 	echo ""
 	echo ": Please read the README.md file for more information."
 	echo ""
@@ -302,6 +300,9 @@ do
 	     ;;
 	     test_node)
 		daloflow_test_node
+	     ;;
+             docker_in_docker)
+		docker run --network host -v $(pwd):/usr/src/daloflow -v "/var/run/docker.sock:/var/run/docker.sock" -it ubuntu /bin/bash
 	     ;;
 
 	     # help
