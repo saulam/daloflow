@@ -86,7 +86,7 @@ daloflow_prerequisites ()
 		  sudo tee /etc/apt/sources.list.d/nvidia-container-runtime.list
 	sudo apt-get update
 	apt-get install -y nvidia-container-runtime
-        docker run -it --rm --gpus all ubuntu nvidia-smi
+        #docker run -it --rm --gpus all ubuntu nvidia-smi
 }
 
 
@@ -282,7 +282,7 @@ do
 		shift
 		A=$1
 		CNAME=$(docker ps -f name=daloflow -q | head -1)
-		docker container exec -it $CNAME mpirun -np $NP -machinefile machines_mpi -bind-to none -map-by slot $A
+		docker container exec -it $CNAME mpirun -np $NP -machinefile machines_mpi -bind-to none -map-by slot  --allow-run-as-root $A
 	     ;;
 	     bash)
 		shift
@@ -302,7 +302,7 @@ do
 		daloflow_test_node
 	     ;;
              docker_in_docker)
-		docker run --network host -v $(pwd):/usr/src/daloflow -v "/var/run/docker.sock:/var/run/docker.sock" -it ubuntu /bin/bash
+		docker run --network host -v $(pwd):/usr/src/daloflow -v "/var/run/docker.sock:/var/run/docker.sock" --runtime=nvidia -it ubuntu /bin/bash
 	     ;;
 
 	     # help

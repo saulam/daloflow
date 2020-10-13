@@ -8,6 +8,7 @@ services:
       - type: bind
         source: /home/acaldero/work/daloflow
         target: /usr/src/daloflow
+    runtime: nvidia
     networks:
       - backend
     dns:

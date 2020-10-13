@@ -12,6 +12,7 @@ services:
         target: /usr/src/daloflow
     networks:
       - backend
+    runtime: nvidia
 
 networks:
   backend:
