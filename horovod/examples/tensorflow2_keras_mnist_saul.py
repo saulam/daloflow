@@ -24,11 +24,11 @@ import pickle as pk
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"]="0,1"
 
-height=28
-width=28
+height=50
+width=50
 channels=1
 batch_size=32
-images_path='/usr/src/daloflow/horovod/examples/mnist'
+images_path='/usr/src/daloflow/horovod/examples/dataset1'
 shuffle=True
 
 # train and validation params
@@ -40,10 +40,10 @@ TRAIN_PARAMS = {'height':height,
                 'images_path':images_path,
                 'shuffle':shuffle}
 
-partition = {'train' : ['train' + str(x) for x in range(60000)], 'validation' : ['test' + str(x) for x in range(10000)]}
-
 with open(images_path+'/labels.p', 'rb') as fd:
     labels_train, labels_test = pk.load(fd)
+
+partition = {'train' : list(labels_train.keys()), 'validation' : list(labels_test.keys())}
 
 '''
 ************** GENERATORS **************
@@ -77,7 +77,7 @@ dataset = tf.data.Dataset.from_tensor_slices(
 dataset = dataset.repeat().shuffle(10000).batch(128)
 '''
 
-input_shape = [28,28,1]
+input_shape = [height,width,channels]
 img_input = tf.keras.layers.Input(shape=input_shape, name='input')
 x = tf.keras.layers.Conv2D(32, [3, 3], activation='relu')(img_input)
 for i in range(10):
