@@ -4,9 +4,11 @@ import pickle as pk
 import zlib
 import os
 
-dataset_name = 'dataset1/'
-heigh = 50
-width = 50
+dataset_name = 'dataset32x32/'
+heigh = 32
+width = 32
+n_train = 1000000
+n_test = 1000
 
 '''
 mnist.init()
@@ -18,10 +20,8 @@ y_train=t_train.reshape((60000*1)).astype(np.uint8)
 y_test=t_test.reshape((10000*1)).astype(np.uint8)
 '''
 
-x_train = np.random.randn(100000,heigh,width)
-x_test = np.random.randn(1000,heigh,width)
-y_train= np.random.randint(2, size=100000)
-y_test= np.random.randint(2, size=1000)
+y_train= np.random.randint(2, size=n_train)
+y_test= np.random.randint(2, size=n_test)
 
 Y_train = {}
 Y_test  = {}
@@ -30,9 +30,9 @@ counter = 0
 dir_index = 0
 
 print('Init...')
-for i in range(x_train.shape[0]):
+for i in range(n_train):
     print(i)
-    x = x_train[i].reshape((heigh*width)).astype(np.uint8)
+    x = np.random.randn(heigh,width).astype(np.uint8)
     x = zlib.compress(x.tobytes())
     ID = 'train'+str(i)
     prefix = dataset_name + str(dir_index) + '/' 
@@ -46,9 +46,9 @@ for i in range(x_train.shape[0]):
         counter=0
         dir_index+=1
 
-for i in range(x_test.shape[0]):
+for i in range(n_test):
     print(i)
-    x = x_test[i].reshape((heigh*width)).astype(np.uint8)
+    x = np.random.randn(heigh,width).astype(np.uint8)
     x = zlib.compress(x.tobytes())
     ID = 'test'+str(i)
     prefix = dataset_name + str(dir_index) + '/'
@@ -62,6 +62,6 @@ for i in range(x_test.shape[0]):
         counter=0
         dir_index+=1
 
-with open('dataset1/labels.p','wb') as fd:
+with open(dataset_name+'labels.p','wb') as fd:
     pk.dump([Y_train, Y_test], fd)
 
