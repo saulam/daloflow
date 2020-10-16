@@ -1,1 +1,1 @@
-docker/Dockerfile-salonso
+docker/Dockerfile-gpu-daloflow-mpich

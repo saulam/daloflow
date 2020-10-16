@@ -60,6 +60,8 @@ RUN apt-get update && apt-get install -y --allow-downgrades --allow-change-held-
         openjdk-8-jdk \
         openjdk-8-jre-headless \
         net-tools \
+        nmap \
+        netcat \
         && \
     apt-get clean
 
@@ -95,17 +97,17 @@ RUN PYTAGS=$(python -c "from packaging import tags; tag = list(tags.sys_tags())[
         https://download.pytorch.org/whl/cu101/torchvision-${TORCHVISION_VERSION}%2Bcu101-${PYTAGS}-linux_x86_64.whl
 RUN pip install mxnet-cu101==${MXNET_VERSION}
 
-# Install Open MPI
-RUN mkdir /tmp/openmpi && \
-    cd /tmp/openmpi && \
-    wget https://www.open-mpi.org/software/ompi/v4.0/downloads/openmpi-4.0.5.tar.gz && \
-    tar zxf openmpi-4.0.5.tar.gz && \
-    cd openmpi-4.0.5 && \
-    ./configure --enable-orterun-prefix-by-default && \
+# Install MPICH
+RUN mkdir /tmp/mpich && \
+    cd /tmp/mpich && \
+    wget http://www.mpich.org/static/downloads/3.3.2/mpich-3.3.2.tar.gz && \
+    tar zxf mpich-3.3.2.tar.gz && \
+    cd /tmp/mpich/mpich-3.3.2  && \
+    ./configure --enable-orterun-prefix-by-default --disable-fortran && \
     make -j $(nproc) all && \
     make install && \
-    ldconfig && \
-    rm -rf /tmp/openmpi
+    ldconfig  && \
+    rm -fr /tmp/mpich/mpich-3.3.2
 
 # Install Horovod, temporarily using CUDA stubs
 RUN ldconfig /usr/local/cuda/targets/x86_64-linux/lib/stubs && \
@@ -139,6 +141,7 @@ RUN cp /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
 # Initial env
 RUN echo 'root:daloflow' | chpasswd
 WORKDIR "/usr/src/daloflow"
+RUN ln -s /usr/src/daloflow /root/daloflow
 
 EXPOSE 22
 CMD ["/usr/sbin/sshd", "-D"]
