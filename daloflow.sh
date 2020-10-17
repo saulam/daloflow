@@ -118,7 +118,7 @@ daloflow_image ()
 {
 	echo "Building initial image..."
 	docker image build -t daloflow:v1 .
-	echo "BASE_HOME=$(pwd)" > .env
+	#echo "BASE_HOME=$(pwd)" > .env
 
 	echo "Building compilation image..."
 	daloflow_start 1
