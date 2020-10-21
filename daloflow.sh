@@ -191,6 +191,11 @@ daloflow_start ()
 	CONTAINER_ID_LIST=$(docker ps -f name=daloflow -q)
 	docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CONTAINER_ID_LIST > machines_mpi
 	docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $CONTAINER_ID_LIST | sed 's/.*/& slots=1/g' > machines_horovod
+
+	if [ $(getent group daloflow) ]; then
+	     chgrp daloflow machines_*
+	fi
+
 }
 
 daloflow_swarm_start ()

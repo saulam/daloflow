@@ -111,7 +111,7 @@ RUN mkdir /tmp/openmpi && \
 
 # Install Horovod, temporarily using CUDA stubs
 RUN ldconfig /usr/local/cuda/targets/x86_64-linux/lib/stubs && \
-    HOROVOD_WITH_TENSORFLOW=1 HOROVOD_WITH_PYTORCH=1 HOROVOD_WITH_MXNET=1 HOROVOD_WITH_MPI=1 HOROVOD_GPU_OPERATIONS=NCCL pip install --no-cache-dir horovod && \
+    HOROVOD_WITH_TENSORFLOW=1 HOROVOD_WITH_PYTORCH=1 HOROVOD_WITH_MXNET=1 HOROVOD_GPU_OPERATIONS=NCCL pip install --no-cache-dir horovod && \
     ldconfig
 
 # Install OpenSSH for MPI to communicate between containers

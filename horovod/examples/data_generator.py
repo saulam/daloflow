@@ -2,7 +2,7 @@
 This is the generator module.
 """
 
-__version__ = '1.0'
+__version__ = '1.1'
 __author__ = 'Saul Alonso-Monsalve'
 __email__ = "saul.alonso.monsalve@cern.ch"
 
@@ -76,11 +76,11 @@ class DataGenerator(object):
         # Initialization
         X = np.empty((self.batch_size, self.height, self.width, self.channels), dtype='float32')
         y = np.empty((self.batch_size), dtype = 'float32')
-        
+       
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
             # Decompress image into pixel NumPy tensor
-            with open(self.images_path + '/' + ID + '.tar.gz', 'rb') as image_file:
+            with open(self.images_path + '/'.join(ID.split('/')[1:]) + '.tar.gz', 'rb') as image_file:
                 pixels = np.fromstring(zlib.decompress(image_file.read()), dtype=np.uint8, sep='').reshape(self.height, self.width, self.channels)
 
             # Store volume

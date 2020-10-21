@@ -19,16 +19,27 @@ import socket
 import os
 from data_generator import DataGenerator
 import pickle as pk
+import argparse
 
 # manually specify the GPUs to use
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"]="0,1"
 
-height=50
-width=50
+parser = argparse.ArgumentParser(description='Build dataset.')
+parser.add_argument('--height',  type=int, default=32,      nargs=1, required=False, help='an integer for the height')
+parser.add_argument('--width',   type=int, default=32,      nargs=1, required=False, help='an integer for the width')
+parser.add_argument('--path',    type=str, default='/mnt/local-storage/daloflow/dataset32x32', nargs=1, required=False, help='dataset path')
+args = parser.parse_args()
+
+#
+# configuration
+#
+
+height           = int(args.height[0])
+width            = int(args.width[0])
+images_path      = args.path[0]
 channels=1
 batch_size=32
-images_path='/usr/src/daloflow/horovod/examples/dataset1'
 shuffle=True
 
 # train and validation params

@@ -60,7 +60,7 @@ for i in range(n_images_train):
     x = np.random.randn(height,width).astype(np.uint8)
     x = zlib.compress(x.tobytes())
     ID = 'train'+str(i)
-    prefix = dataset_name + '/' + str(dir_index) + '/' 
+    prefix = dataset_name + '/' + str(dir_index) + '/'
     if not os.path.exists(prefix):
         os.makedirs(prefix)
     with open(prefix+ID+'.tar.gz','wb') as fd:
