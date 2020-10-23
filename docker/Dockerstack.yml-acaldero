@@ -3,7 +3,7 @@ version: "3.8"
 
 services:
   node:
-    image: daloflow:latest
+    image: daloflow:v2
     volumes:
       - type: bind
         source: /home/acaldero/work/daloflow
@@ -11,8 +11,6 @@ services:
     runtime: nvidia
     networks:
       - backend
-    dns:
-      - 8.8.8.8
 
 networks:
   backend:

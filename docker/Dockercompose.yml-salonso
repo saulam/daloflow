@@ -5,14 +5,14 @@ services:
     build:
       context: ./
       dockerfile: ./Dockerfile
-    image: daloflow:latest
+    image: daloflow:v2
     volumes:
       - type: bind
         source: /raid/monsals/daloflow
         target: /usr/src/daloflow
+    runtime: nvidia
     networks:
       - backend
-    runtime: nvidia
 
 networks:
   backend:

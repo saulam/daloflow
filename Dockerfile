@@ -1,1 +1,1 @@
-docker/Dockerfile-gpu-daloflow-mpich
+docker/Dockerfile-cpu-daloflow

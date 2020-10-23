@@ -25,7 +25,7 @@
 daloflow_help ()
 {
 	echo ""
-	echo "  daloflow 3.0"
+	echo "  daloflow 3.2"
 	echo " --------------"
 	echo ""
 	echo ": For first time deployment, please execute:"
@@ -33,15 +33,15 @@ daloflow_help ()
 	echo "  $0 prerequisites"
 	echo "  $0 image"
 	echo ""
-	echo ": For a typical single node work session, please execute:"
-	echo "  $0 start <number of containers>"
-	echo "  $0 mpirun <np> \"python3 ./horovod/examples/tensorflow2_keras_mnist.py\""
+	echo ": For a typical single node work session (with 4 containers and 2 process), please execute:"
+	echo "  $0 start 4"
+	echo "  $0 mpirun 2 \"python3.7 ./horovod/examples/tensorflow2_keras_mnist_saul.py --height 32 --width 32 --path dataset32x32\""
 	echo "  ..."
 	echo "  $0 stop"
 	echo ""
-	echo ": For a typical multinode work session, please execute:"
-	echo "  $0 swarm-start <number of containers>"
-	echo "  $0 mpirun <np> \"python3 ./horovod/examples/tensorflow2_keras_mnist.py\""
+	echo ": For a typical multinode work session (with 4 containers and 2 process), please execute:"
+	echo "  $0 swarm-start 4"
+	echo "  $0 mpirun 2 \"python3.7 ./horovod/examples/tensorflow2_keras_mnist_saul.py --height 32 --width 32 --path dataset32x32\""
 	echo "  ..."
 	echo "  $0 swarm-stop"
 	echo ""
@@ -61,29 +61,30 @@ daloflow_help ()
 
 daloflow_postclone ()
 {
-	echo "Downloading mpich 3.3.2, tensorflow 2.0.1, and Horovod 0.19.0..."
+	echo "Downloading Source Code for OpenMPI 4.0.5, tensorflow 2.3.0, and Horovod 0.20.3..."
 
 	# MPI
-	wget http://www.mpich.org/static/downloads/3.3.2/mpich-3.3.2.tar.gz
-	rm -fr mpich
-	tar zxf mpich-3.3.2.tar.gz
-	mv mpich-3.3.2 mpich
+        wget https://www.open-mpi.org/software/ompi/v4.0/downloads/openmpi-4.0.5.tar.gz
+	rm -fr openmpi
+        tar zxf openmpi-4.0.5.tar.gz
+	mv openmpi-4.0.5 openmpi
 
 	# TENSORFLOW
-	wget https://github.com/tensorflow/tensorflow/archive/v2.0.1.tar.gz
+	wget https://github.com/tensorflow/tensorflow/archive/v2.3.0.tar.gz
 	rm -fr tensorflow
-	tar zxf v2.0.1.tar.gz
-	mv tensorflow-2.0.1 tensorflow
+	tar zxf v2.3.0.tar.gz
+	mv tensorflow-2.3.0 tensorflow
 
 	# HOROVOD
-	wget https://github.com/horovod/horovod/archive/v0.19.0.tar.gz
-	tar zxf v0.19.0.tar.gz
-	mv horovod-0.19.0 horovod
+	wget https://github.com/horovod/horovod/archive/v0.20.3.tar.gz
+	rm -fr horovod
+	tar zxf v0.20.3.tar.gz
+	mv horovod-0.20.3 horovod
 }
 
 daloflow_prerequisites ()
 {
-	echo "Installing Docker and Docker-compose..."
+	echo "Installing Docker, Docker-compose and Nvidia-container-runtime..."
 
 	# To Install DOCKER
 	sudo apt-get update
@@ -117,8 +118,7 @@ daloflow_prerequisites ()
 daloflow_image ()
 {
 	echo "Building initial image..."
-	docker image build -t daloflow:v1 .
-	#echo "BASE_HOME=$(pwd)" > .env
+	docker image build -t daloflow:v2 .
 
 	echo "Building compilation image..."
 	daloflow_start 1
@@ -142,30 +142,28 @@ daloflow_build ()
 daloflow_build_node ()
 {
 	# MPICH
-	# from source # ./mpich-build.sh
-	./mpich-build.sh
+	# from source  # ./mpich-build.sh
 
 	# TENSORFLOW
-        # from source # ./tensorflow-build.sh
-        # from wheel  # pip3 install ./daloflow/tensorflow-2.0.1-cp36-cp36m-linux_x86_64.whl
-        pip3 install ./daloflow/tensorflow-2.0.1-cp36-cp36m-linux_x86_64.whl
+        # from source  # ./tensorflow-build.sh
+        # from wheel   # pip3 install ./daloflow/tensorflow-2.0.1-cp36-cp36m-linux_x86_64.whl
 
 	# HOROVOD
-	# from source #./horovod-build.sh
-	# from wheel  # HOROVOD_WITH_MPI=1 HOROVOD_WITH_TENSORFLOW=1 pip3 install ./daloflow/horovod-0.19.0-cp36-cp36m-linux_x86_64.whl
-	HOROVOD_WITH_MPI=1 HOROVOD_WITH_TENSORFLOW=1 pip3 install --no-cache-dir horovod
+	# from source  #./horovod-build.sh
+	# from wheel   # HOROVOD_WITH_MPI=1 HOROVOD_WITH_TENSORFLOW=1 pip3 install ./daloflow/horovod-0.19.0-cp36-cp36m-linux_x86_64.whl
+	# from package # HOROVOD_WITH_MPI=1 HOROVOD_WITH_TENSORFLOW=1 pip3 install --no-cache-dir horovod
 }
 
 daloflow_save ()
 {
-	echo "Saving image..."
+	echo "Saving daloflow:v2 image..."
 	IMAGE_ID_LIST=$(docker image ls|grep daloflow|grep latest|awk '{print $3}')
-	docker image save daloflow:latest | gzip -5 > daloflow_v2.tgz 
+	docker image save daloflow:v2 | gzip -5 > daloflow_v2.tgz 
 }
 
 daloflow_load ()
 {
-	echo "Loading image..."
+	echo "Loading daloflow:v2 image..."
 	cat daloflow_v2.tgz | gunzip - | docker image load
 }
 
