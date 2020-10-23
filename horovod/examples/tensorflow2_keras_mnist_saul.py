@@ -54,6 +54,7 @@ TRAIN_PARAMS = {'height':height,
 with open(images_path+'/labels.p', 'rb') as fd:
     labels_train, labels_test = pk.load(fd)
 
+nevents=len(list(labels_train.keys()))
 partition = {'train' : list(labels_train.keys()), 'validation' : list(labels_test.keys())}
 
 '''
@@ -155,4 +156,5 @@ verbose = 1 if hvd.rank() == 0 else 0
 # Train the model.
 # Horovod: adjust number of steps based on number of GPUs.
 #mnist_model.fit(dataset, steps_per_epoch=10 // hvd.size(), callbacks=callbacks, epochs=24, verbose=verbose)
-mnist_model.fit(x=training_generator, steps_per_epoch=10 // hvd.size(), callbacks=callbacks, epochs=24, verbose=verbose)
+steps_per_epoch=nevents//batch_size
+mnist_model.fit(x=training_generator, steps_per_epoch=steps_per_epoch // hvd.size(), callbacks=callbacks, epochs=24, verbose=verbose)
