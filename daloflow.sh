@@ -143,17 +143,29 @@ daloflow_build_node ()
 {
 	echo "Build source code..."
 
-	# MPICH
-	# from source  # ./mpich-build.sh
+	# OpenMPI
+	# from source:
+        cd /usr/src/daloflow/openmpi
+	./configure --enable-orterun-prefix-by-default
+	make -j $(nproc) all
+	make install
+	ldconfig
 
 	# TENSORFLOW
-        # from source  # ./tensorflow-build.sh
-        # from wheel   # pip3 install ./daloflow/tensorflow-2.0.1-cp36-cp36m-linux_x86_64.whl
+	# from source:
+        cd /usr/src/daloflow/tensorflow
+        yes "" | $(which python3) configure.py
+        bazel build --config=opt //tensorflow/tools/pip_package:build_pip_package --action_env PYTHON_BIN_PATH=/usr/bin/python3 
+        ./bazel-bin/tensorflow/tools/pip_package/build_pip_package /usr/src/daloflow/tensorflow/tensorflow_pkg
+        pip3 install /usr/src/daloflow/tensorflow/tensorflow_pkg/tensorflow-*.whl
 
 	# HOROVOD
-	# from source  #./horovod-build.sh
-	# from wheel   # HOROVOD_WITH_MPI=1 HOROVOD_WITH_TENSORFLOW=1 pip3 install ./daloflow/horovod-0.19.0-cp36-cp36m-linux_x86_64.whl
 	# from package # HOROVOD_WITH_MPI=1 HOROVOD_WITH_TENSORFLOW=1 pip3 install --no-cache-dir horovod
+	# from source:
+        cd /usr/src/daloflow/horovod
+        python3 setup.py clean
+        CFLAGS="-march=native -mavx -mavx2 -mfma -mfpmath=sse" python3 setup.py bdist_wheel
+        HOROVOD_WITH_MPI=1 HOROVOD_WITH_TENSORFLOW=1 pip3 install ./dist/horovod-*.whl
 }
 
 daloflow_save ()
