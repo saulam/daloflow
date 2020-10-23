@@ -307,8 +307,20 @@ do
 		shift
 		A=$1
 		CNAME=$(docker ps -f name=daloflow -q | head -1)
-		docker container exec -it $CNAME mpirun -np $NP -machinefile machines_mpi -bind-to none -map-by slot  --allow-run-as-root $A
+
+	      # docker container exec -it $CNAME mpirun -np $NP -machinefile machines_mpi -bind-to none -map-by slot  --allow-run-as-root $A
+	      # docker container exec -it $CNAME mpirun -np $NP -machinefile machines_mpi -bind-to none -map-by slot                      $A
 	      # docker container exec -it $CNAME horovodrun -np $NP -hostfile machines_horovod $A
+
+              # daloflow:v2 in TUCAN working !!!
+                docker container exec -it $CNAME     \
+                       mpirun -np $NP -machinefile machines_horovod \
+                              -bind-to none -map-by slot -verbose --allow-run-as-root \
+                               -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
+                               -x NCCL_SOCKET_IFNAME=^lo,docker0 \
+                               -mca pml ob1 -mca btl ^openib \
+                               -mca btl_tcp_if_exclude lo,docker0,eth1 \
+                              $A
 	     ;;
 	     bash)
 		shift
