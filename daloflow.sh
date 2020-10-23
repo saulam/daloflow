@@ -31,6 +31,7 @@ daloflow_help ()
 	echo ": For first time deployment, please execute:"
 	echo "  $0 postclone"
 	echo "  $0 prerequisites"
+	echo "  $0 build"
 	echo ""
 	echo ": For a typical single node work session (with 4 containers and 2 process), please execute:"
 	echo "  $0 start 4"
@@ -114,14 +115,14 @@ daloflow_prerequisites ()
 # Image
 #
 
-daloflow_image ()
+daloflow_build_image ()
 {
 	echo "Building initial image..."
 	docker image build -t daloflow:v2 .
 
 	echo "Building compilation image..."
 	daloflow_start 1
-        daloflow_build
+        daloflow_build_all
 
 	echo "Commiting image..."
 	CONTAINER_ID_LIST=$(docker ps|grep daloflow_node|cut -f1 -d' ')
@@ -129,7 +130,7 @@ daloflow_image ()
 	docker-compose -f Dockercompose.yml down
 }
 
-daloflow_build ()
+daloflow_build_all ()
 {
 	# Install each node
 	CONTAINER_ID_LIST=$(docker ps|grep daloflow_node|cut -f1 -d' ')
@@ -261,20 +262,24 @@ do
 	     ;;
 
 	     # image
-	     image)
-		daloflow_image
-	     ;;
-	     build)
-		daloflow_build
-	     ;;
-	     build_node)
-		daloflow_build_node
+	     build|image)
+	        echo "Building initial image..."
+	        docker image build -t daloflow:v2 .
 	     ;;
 	     save)
                 daloflow_save
 	     ;;
 	     load)
                 daloflow_load
+	     ;;
+	     build_image)
+		daloflow_build_image
+	     ;;
+	     build_all)
+		daloflow_build_all
+	     ;;
+	     build_node)
+		daloflow_build_node
 	     ;;
 
 	     # single node
