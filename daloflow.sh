@@ -31,7 +31,6 @@ daloflow_help ()
 	echo ": For first time deployment, please execute:"
 	echo "  $0 postclone"
 	echo "  $0 prerequisites"
-	echo "  $0 image"
 	echo ""
 	echo ": For a typical single node work session (with 4 containers and 2 process), please execute:"
 	echo "  $0 start 4"
@@ -141,6 +140,8 @@ daloflow_build ()
 
 daloflow_build_node ()
 {
+	echo "Build source code..."
+
 	# MPICH
 	# from source  # ./mpich-build.sh
 
