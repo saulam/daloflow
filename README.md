@@ -1,7 +1,7 @@
 # daloflow
 DAta LOcality on tensorFLOW.
 
-First time:
+### Get daloflow and setup initial stuff:
 1. To clone from github
    * git clone https://github.com/saulam/daloflow.git
    * cd daloflow
@@ -12,7 +12,7 @@ First time:
 3. Build the docker image:
    * ./daloflow.sh build
   
-Work session:
+### Typical daloflow work session:
 1. Start work session:
    * Single node:
      * ./daloflow.sh start <number of containers>
@@ -28,7 +28,7 @@ Work session:
    * Several nodes:
      * ./daloflow.sh swarm-stop
 
-Some options for debugging:
+### Some additional options for debugging:
 * ./daloflow.sh status
 * ./daloflow.sh test
 * ./daloflow.sh bash <id container, from 1 up to nc>
