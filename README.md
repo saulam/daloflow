@@ -11,8 +11,8 @@ First time:
 * Pre-requisites (if docker + docker-compose is not installed):
   * ./daloflow.sh prerequisites
 * Build the docker image:
-  * ./daloflow.sh image
-
+  * ./daloflow.sh build
+  
 Work session (in a single node):
 * Start work session:
   * Single node:
