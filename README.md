@@ -6,6 +6,7 @@ DAta LOcality on tensorFLOW.
    * git clone https://github.com/saulam/daloflow.git
    * cd daloflow
    * chmod +x ./daloflow.sh
+   * ./daloflow.sh postclone
 2. IF docker + docker-compose is not installed THEN install pre-requisites:
    * ./daloflow.sh prerequisites
 3. Build the docker image:
@@ -17,8 +18,8 @@ DAta LOcality on tensorFLOW.
      * ./daloflow.sh start <number of containers>
    * Several nodes:
      * ./daloflow.sh swarm-start <number of containers>
-2. Run your applications. For example:
-   * ./daloflow.sh mpirun <np> "python3 ./do_tf2kp_mnist.py"
+2. Run the applications, for example for NP=2:
+   * ./daloflow.sh mpirun 2 "python3 ./do_tf2kp_mnist.py"
    * ...
 3. Stop work session:
    * Single node:
@@ -29,5 +30,5 @@ DAta LOcality on tensorFLOW.
 ### Some additional options for debugging:
 * ./daloflow.sh status
 * ./daloflow.sh test
-* ./daloflow.sh bash <id container, from 1 up to nc>
+* ./daloflow.sh bash <id container, from 1 up to NC>
 
