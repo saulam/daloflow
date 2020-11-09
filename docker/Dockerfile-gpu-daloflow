@@ -179,7 +179,6 @@ RUN echo 'root:daloflow' | chpasswd
 RUN mkdir -p /daloflow
 RUN ln -s /usr/src/daloflow /root/daloflow_src
 RUN ln -s /daloflow         /root/daloflow
-RUN ln -s /usr/src/daloflow /daloflow/src
 WORKDIR "/daloflow"
 
 EXPOSE 22
