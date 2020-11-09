@@ -18,8 +18,7 @@ DAta LOcality on tensorFLOW.
    * Several nodes:
      * ./daloflow.sh swarm-start <number of containers>
 2. Run your applications. For example:
-   * ./daloflow.sh mpirun <np> "python3 ./horovod/examples/tensorflow2_keras_mnist.py"
-   * ./daloflow.sh mpirun <np> "python3 ./horovod/examples/tensorflow2_mnist.py"
+   * ./daloflow.sh mpirun <np> "python3 ./do_tf2kp_mnist.py"
    * ...
 3. Stop work session:
    * Single node:

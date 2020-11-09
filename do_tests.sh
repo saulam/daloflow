@@ -26,17 +26,41 @@
 # Params
 #
 
- SIZES="32 64 128 256 512 1024"
- N_IMG_TRAIN="1000000"
- N_IMG_TEST="1000"
+SIZES="32 128"
+N_IMG_TRAIN="1000000"
+N_IMG_TEST="1000"
+
+N_NODES=4
+N_PROCESS="1 2 4 8"
 
 
 #
 # Main
 #
 
+# build datasets...
 for S in $SIZES; do
-    echo " * "$NI images of $S"x"$S"..."
-    python3 mk_dataset.py --height $S --width $S --ntrain $N_IMG_TRAIN --ntest $N_IMG_TEST
+
+    echo " * Dataset for "$N_IMG_TRAIN" images of "$S"x"$S" pixels..."
+
+    DIR_NAME="dataset"$S"x"$S
+    if [ ! -d $DIR_NAME ]; then
+         echo "   * Building dataset..."
+         echo python3 mk_dataset.py --height $S --width $S --ntrain $N_IMG_TRAIN --ntest $N_IMG_TEST
+    fi
+
 done
+
+# build datasets...
+echo ./daloflow.sh swarm-start $N_NODES
+
+for NP in $N_PROCESS; do
+for S in $SIZES; do
+    DIR_NAME="dataset"$S"x"$S
+    echo " * Testing dataset $DIR_NAME with $NP processes on $N_NODES nodes..."
+    echo ./daloflow.sh mpirun $NP "python3 ./do_tf2kp_mnist.py --height $S --width $S --path $DIR_NAME"
+done
+done
+
+echo ./daloflow.sh swarm-stop
 
