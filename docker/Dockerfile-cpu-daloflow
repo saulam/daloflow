@@ -58,7 +58,7 @@ RUN curl -O https://bootstrap.pypa.io/get-pip.py && \
 
 
 # A.1) Download TENSORFLOW source code
-RUN mkdir /usr/src/daloflow && \
+RUN mkdir -p /usr/src/daloflow && \
     cd /usr/src/daloflow && \
     wget https://github.com/tensorflow/tensorflow/archive/v2.3.0.tar.gz && \
     rm -fr tensorflow && \
@@ -82,7 +82,7 @@ RUN pip install tensorflow-cpu==${TENSORFLOW_VERSION} \
 
 
 # B.1) Download Open MPI
-RUN mkdir /usr/src/daloflow && \
+RUN mkdir -p /usr/src/daloflow && \
     cd /usr/src/daloflow && \
     wget https://www.open-mpi.org/software/ompi/v4.0/downloads/openmpi-4.0.5.tar.gz && \
     rm -fr openmpi && \
@@ -98,7 +98,7 @@ RUN cd /usr/src/daloflow/openmpi && \
 
 
 # C.1) Download HOROVOD source code
-RUN mkdir /usr/src/daloflow && \
+RUN mkdir -p /usr/src/daloflow && \
     cd /usr/src/daloflow && \
     wget https://github.com/horovod/horovod/archive/v0.20.3.tar.gz && \
     rm -fr horovod && \
