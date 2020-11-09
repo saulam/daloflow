@@ -9,7 +9,7 @@ services:
     volumes:
       - type: bind
         source: /mnt/local-storage/daloflow
-        target: /usr/src/daloflow
+        target: /daloflow
     runtime: nvidia
     networks:
       - backend

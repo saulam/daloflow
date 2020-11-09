@@ -5,11 +5,11 @@ services:
     build:
       context: ./
       dockerfile: ./Dockerfile
-    image: daloflow:v2
+    image: daloflow:v3
     volumes:
       - type: bind
         source: /home/acaldero/work/daloflow
-        target: /usr/src/daloflow
+        target: /daloflow
     #runtime: nvidia
     networks:
       - backend

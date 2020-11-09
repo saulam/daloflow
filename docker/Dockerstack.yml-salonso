@@ -7,7 +7,7 @@ services:
     volumes:
       - type: bind
         source: /raid/monsals/daloflow
-        target: /usr/src/daloflow
+        target: /daloflow
     runtime: nvidia
     networks:
       - backend

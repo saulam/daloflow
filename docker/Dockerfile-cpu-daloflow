@@ -135,7 +135,10 @@ RUN cp /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
 
 # Initial env
 RUN echo 'root:daloflow' | chpasswd
-WORKDIR "/usr/src/daloflow"
+WORKDIR "/daloflow"
+RUN ln -s /usr/src/daloflow /root/daloflow_src
+RUN ln -s /daloflow         /root/daloflow
+RUN ln -s /usr/src/daloflow /daloflow/src
 
 EXPOSE 22
 CMD ["/usr/sbin/sshd", "-D"]
