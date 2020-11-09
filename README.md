@@ -6,7 +6,7 @@ DAta LOcality on tensorFLOW.
    * git clone https://github.com/saulam/daloflow.git
    * cd daloflow
    * chmod +x ./daloflow.sh
-   * ./daloflow.sh postclone
+   * ./daloflow.sh init
 2. IF docker + docker-compose is not installed THEN install pre-requisites:
    * ./daloflow.sh prerequisites
 3. Build the docker image:

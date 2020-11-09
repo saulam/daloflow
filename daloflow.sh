@@ -33,7 +33,7 @@ daloflow_welcome ()
 daloflow_help ()
 {
 	echo ": For first time deployment, please execute:"
-	echo "  $0 postclone"
+	echo "  $0 init"
 	echo "  $0 prerequisites"
 	echo "  $0 build"
 	echo ""
@@ -75,14 +75,14 @@ daloflow_info_no_start ()
 # Installation
 #
 
-daloflow_postclone ()
+daloflow_init ()
 {
 	echo "Building Dockerfile, Dockercompose.yml and Dockerstack.yml..."
 
 	# SOURCE_DIRECTORY -> current working directory
 	sed "s|SOURCE_DIRECTORY|$(pwd)|g" docker/Dockercompose.yml-model > Dockercompose.yml
 	sed "s|SOURCE_DIRECTORY|$(pwd)|g" docker/Dockerstack.yml-model   > Dockerstack.yml
-	cat                               docker/Dockerfile-gpu-daloflow > Dockerfile
+	cat                               docker/Dockerfile-cpu-daloflow > Dockerfile
 
 	#echo "Downloading Source Code for OpenMPI 4.0.5, tensorflow 2.3.0, and Horovod 0.20.3..."
 
@@ -307,8 +307,8 @@ while (( "$#" ));
 do
 	case $1 in
 	     # first execution
-	     postclone)
-		daloflow_postclone
+	     init)
+		daloflow_init
 	     ;;
 	     prerequisites)
 		daloflow_prerequisites
