@@ -38,6 +38,10 @@ N_PROCESS="1 2 4 8"
 # Main
 #
 
+sed "s|SOURCE_DIRECTORY|$(pwd)|g" docker/Dockercompose.yml-model > Dockercompose.yml
+sed "s|SOURCE_DIRECTORY|$(pwd)|g" docker/Dockerstack.yml-model   > Dockerstack.yml
+ln -s docker/Dockerfile-gpu-daloflow Dockerfile
+
 # build datasets...
 for S in $SIZES; do
 

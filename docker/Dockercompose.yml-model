@@ -8,7 +8,7 @@ services:
     image: daloflow:v2
     volumes:
       - type: bind
-        source: /mnt/local-storage/daloflow
+        source: SOURCE_DIRECTORY
         target: /daloflow
     runtime: nvidia
     networks:
