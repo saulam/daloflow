@@ -39,26 +39,26 @@ N_PROCESS="1 2 4 8"
 #
 
 # build datasets...
+echo ": : Building dataset..."
 for S in $SIZES; do
-
-    echo ": Dataset for "$N_IMG_TRAIN" images of "$S"x"$S" pixels..."
 
     DIR_NAME="dataset"$S"x"$S
     if [ ! -d $DIR_NAME ]; then
-         echo ": : Building dataset..."
-         echo python3 mk_dataset.py --height $S --width $S --ntrain $N_IMG_TRAIN --ntest $N_IMG_TEST
+         echo ": Dataset for "$N_IMG_TRAIN" images of "$S"x"$S" pixels..."
+         echo "  python3 mk_dataset.py --height $S --width $S --ntrain $N_IMG_TRAIN --ntest $N_IMG_TEST"
     fi
 
 done
 
 # build datasets...
+echo ": : Work session..."
 echo ./daloflow.sh swarm-start $N_NODES
 
 for NP in $N_PROCESS; do
 for S in $SIZES; do
     DIR_NAME="dataset"$S"x"$S
     echo ": Testing dataset $DIR_NAME with $NP processes on $N_NODES nodes..."
-    echo ./daloflow.sh mpirun $NP \"python3 ./do_tf2kp_mnist.py --height $S --width $S --path $DIR_NAME\"
+    echo "  ./daloflow.sh mpirun $NP \"python3 ./do_tf2kp_mnist.py --height $S --width $S --path $DIR_NAME\""
 done
 done
 

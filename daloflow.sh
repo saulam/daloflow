@@ -77,12 +77,18 @@ daloflow_info_no_start ()
 
 daloflow_init ()
 {
-	echo "Building Dockerfile, Dockercompose.yml and Dockerstack.yml..."
+	# Setup number of containers
+	PU=cpu
+	if [ "$1" == "gpu" ]; then
+	     PU=gpu
+	fi
+
+	echo "Building Dockerfile, Dockercompose.yml and Dockerstack.yml for $PU..."
 
 	# SOURCE_DIRECTORY -> current working directory
 	sed "s|SOURCE_DIRECTORY|$(pwd)|g" docker/Dockercompose.yml-model > Dockercompose.yml
 	sed "s|SOURCE_DIRECTORY|$(pwd)|g" docker/Dockerstack.yml-model   > Dockerstack.yml
-	cat                               docker/Dockerfile-cpu-daloflow > Dockerfile
+	cat                               docker/Dockerfile-$PU-daloflow > Dockerfile
 
 	#echo "Downloading Source Code for OpenMPI 4.0.5, tensorflow 2.3.0, and Horovod 0.20.3..."
 
@@ -308,7 +314,8 @@ do
 	case $1 in
 	     # first execution
 	     init|postclone)
-		daloflow_init
+		shift
+		daloflow_init $@
 	     ;;
 	     prerequisites)
 		daloflow_prerequisites
