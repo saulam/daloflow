@@ -66,11 +66,11 @@ RUN mkdir /usr/src/daloflow && \
     mv tensorflow-2.3.0 tensorflow
 
 # A.2) Compile TENSORFLOW source code
-RUN cd /usr/src/daloflow/tensorflow && \
-    yes "" | $(which python3) configure.py && \
-    bazel build --config=opt //tensorflow/tools/pip_package:build_pip_package --action_env PYTHON_BIN_PATH=/usr/bin/python3  && \
-    ./bazel-bin/tensorflow/tools/pip_package/build_pip_package /usr/src/daloflow/tensorflow/tensorflow_pkg
-    # pip3 install /usr/src/daloflow/tensorflow/tensorflow_pkg/tensorflow-*.whl
+#RUN cd /usr/src/daloflow/tensorflow && \
+#    yes "" | $(which python3) configure.py && \
+#    bazel build --config=opt //tensorflow/tools/pip_package:build_pip_package --action_env PYTHON_BIN_PATH=/usr/bin/python3  && \
+#    ./bazel-bin/tensorflow/tools/pip_package/build_pip_package /usr/src/daloflow/tensorflow/tensorflow_pkg
+#    # pip3 install /usr/src/daloflow/tensorflow/tensorflow_pkg/tensorflow-*.whl
 
 # A.3) Install TensorFlow, Keras, PyTorch and MXNet (from package)
 RUN pip install future typing
@@ -106,10 +106,10 @@ RUN mkdir /usr/src/daloflow && \
     mv horovod-0.20.3 horovod
 
 # C.2) Compile HOROVOD source code
-RUN cd /usr/src/daloflow/horovod && \
-    python3 setup.py clean && \
-    CFLAGS="-march=native -mavx -mavx2 -mfma -mfpmath=sse" python3 setup.py bdist_wheel
-  # HOROVOD_WITH_MPI=1 HOROVOD_WITH_TENSORFLOW=1 pip3 install ./dist/horovod-*.whl
+#RUN cd /usr/src/daloflow/horovod && \
+#    python3 setup.py clean && \
+#    CFLAGS="-march=native -mavx -mavx2 -mfma -mfpmath=sse" python3 setup.py bdist_wheel
+#  # HOROVOD_WITH_MPI=1 HOROVOD_WITH_TENSORFLOW=1 pip3 install ./dist/horovod-*.whl
 
 # C.3) Install Horovod (from package)
 RUN HOROVOD_WITH_TENSORFLOW=1 HOROVOD_WITHOUT_PYTORCH=1 HOROVOD_WITHOUT_MXNET=1 HOROVOD_WITH_MPI=1 \
