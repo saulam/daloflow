@@ -45,7 +45,7 @@ for S in $SIZES; do
 
     DIR_NAME="dataset"$S"x"$S
     if [ ! -d $DIR_NAME ]; then
-         echo ":: Building dataset..."
+         echo ": : Building dataset..."
          echo python3 mk_dataset.py --height $S --width $S --ntrain $N_IMG_TRAIN --ntest $N_IMG_TEST
     fi
 

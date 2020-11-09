@@ -307,7 +307,7 @@ while (( "$#" ));
 do
 	case $1 in
 	     # first execution
-	     init)
+	     init|postclone)
 		daloflow_init
 	     ;;
 	     prerequisites)
