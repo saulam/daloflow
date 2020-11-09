@@ -1,1 +1,1 @@
-docker/Dockerfile-gpu-daloflow
+docker/Dockerfile-cpu-daloflow
