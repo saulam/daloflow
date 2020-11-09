@@ -33,6 +33,7 @@ daloflow_welcome ()
 daloflow_help ()
 {
 	echo ": For first time deployment, please execute:"
+	echo "  $0 postclone"
 	echo "  $0 prerequisites"
 	echo "  $0 build"
 	echo ""
@@ -73,6 +74,36 @@ daloflow_info_no_start ()
 #
 # Installation
 #
+
+daloflow_postclone ()
+{
+	echo "Building Dockerfile, Dockercompose.yml and Dockerstack.yml..."
+
+	# SOURCE_DIRECTORY -> current working directory
+	sed "s|SOURCE_DIRECTORY|$(pwd)|g" docker/Dockercompose.yml-model > Dockercompose.yml
+	sed "s|SOURCE_DIRECTORY|$(pwd)|g" docker/Dockerstack.yml-model   > Dockerstack.yml
+	cat                               docker/Dockerfile-gpu-daloflow > Dockerfile
+
+	echo "Downloading Source Code for OpenMPI 4.0.5, tensorflow 2.3.0, and Horovod 0.20.3..."
+
+	## MPI
+        #wget https://www.open-mpi.org/software/ompi/v4.0/downloads/openmpi-4.0.5.tar.gz
+	#rm -fr openmpi
+        #tar zxf openmpi-4.0.5.tar.gz
+	#mv openmpi-4.0.5 openmpi
+
+	## TENSORFLOW
+	#wget https://github.com/tensorflow/tensorflow/archive/v2.3.0.tar.gz
+	#rm -fr tensorflow
+	#tar zxf v2.3.0.tar.gz
+	#mv tensorflow-2.3.0 tensorflow
+
+	## HOROVOD
+	#wget https://github.com/horovod/horovod/archive/v0.20.3.tar.gz
+	#rm -fr horovod
+	#tar zxf v0.20.3.tar.gz
+	#mv horovod-0.20.3 horovod
+}
 
 daloflow_prerequisites ()
 {
@@ -276,6 +307,9 @@ while (( "$#" ));
 do
 	case $1 in
 	     # first execution
+	     postclone)
+		daloflow_postclone
+	     ;;
 	     prerequisites)
 		daloflow_prerequisites
 	     ;;
