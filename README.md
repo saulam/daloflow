@@ -33,3 +33,4 @@ DAta LOcality on tensorFLOW.
 * ./daloflow.sh test
 * ./daloflow.sh bash <id container, from 1 up to nc>
 
+
