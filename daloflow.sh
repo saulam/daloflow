@@ -25,7 +25,7 @@
 daloflow_welcome ()
 {
 	echo ""
-	echo "  daloflow 3.5"
+	echo "  daloflow 3.8"
 	echo " --------------"
 	echo ""
 }
@@ -33,7 +33,6 @@ daloflow_welcome ()
 daloflow_help ()
 {
 	echo ": For first time deployment, please execute:"
-	echo "  $0 postclone"
 	echo "  $0 prerequisites"
 	echo "  $0 build"
 	echo ""
@@ -75,29 +74,6 @@ daloflow_info_no_start ()
 # Installation
 #
 
-daloflow_postclone ()
-{
-	echo "Downloading Source Code for OpenMPI 4.0.5, tensorflow 2.3.0, and Horovod 0.20.3..."
-
-	# MPI
-        wget https://www.open-mpi.org/software/ompi/v4.0/downloads/openmpi-4.0.5.tar.gz
-	rm -fr openmpi
-        tar zxf openmpi-4.0.5.tar.gz
-	mv openmpi-4.0.5 openmpi
-
-	# TENSORFLOW
-	wget https://github.com/tensorflow/tensorflow/archive/v2.3.0.tar.gz
-	rm -fr tensorflow
-	tar zxf v2.3.0.tar.gz
-	mv tensorflow-2.3.0 tensorflow
-
-	# HOROVOD
-	wget https://github.com/horovod/horovod/archive/v0.20.3.tar.gz
-	rm -fr horovod
-	tar zxf v0.20.3.tar.gz
-	mv horovod-0.20.3 horovod
-}
-
 daloflow_prerequisites ()
 {
 	echo "Installing Docker, Docker-compose and Nvidia-container-runtime..."
@@ -135,56 +111,6 @@ daloflow_build_base_image ()
 {
 	echo "Building initial image..."
 	docker image build -t daloflow:v2 .
-}
-
-daloflow_build_derivated_image ()
-{
-	echo "Building compilation image..."
-	daloflow_start 1
-        daloflow_build_all
-
-	echo "Commiting image..."
-	CONTAINER_ID_LIST=$(docker ps|grep daloflow_node|cut -f1 -d' ')
-	docker commit $CONTAINER_ID_LIST daloflow:latest
-	docker-compose -f Dockercompose.yml down
-}
-
-daloflow_build_all ()
-{
-	# Install each node
-	CONTAINER_ID_LIST=$(docker ps|grep daloflow_node|cut -f1 -d' ')
-	for C in $CONTAINER_ID_LIST; do
-		docker container exec -it $C ./daloflow.sh build_node 
-	done
-}
-
-daloflow_build_node ()
-{
-	echo "Build source code..."
-
-	# OpenMPI
-	# from source:
-        cd /usr/src/daloflow/openmpi
-	./configure --enable-orterun-prefix-by-default
-	make -j $(nproc) all
-	make install
-	ldconfig
-
-	# TENSORFLOW
-	# from source:
-        cd /usr/src/daloflow/tensorflow
-        yes "" | $(which python3) configure.py
-        bazel build --config=opt //tensorflow/tools/pip_package:build_pip_package --action_env PYTHON_BIN_PATH=/usr/bin/python3 
-        ./bazel-bin/tensorflow/tools/pip_package/build_pip_package /usr/src/daloflow/tensorflow/tensorflow_pkg
-        pip3 install /usr/src/daloflow/tensorflow/tensorflow_pkg/tensorflow-*.whl
-
-	# HOROVOD
-	# from package # HOROVOD_WITH_MPI=1 HOROVOD_WITH_TENSORFLOW=1 pip3 install --no-cache-dir horovod
-	# from source:
-        cd /usr/src/daloflow/horovod
-        python3 setup.py clean
-        CFLAGS="-march=native -mavx -mavx2 -mfma -mfpmath=sse" python3 setup.py bdist_wheel
-        HOROVOD_WITH_MPI=1 HOROVOD_WITH_TENSORFLOW=1 pip3 install ./dist/horovod-*.whl
 }
 
 daloflow_save ()
@@ -231,7 +157,7 @@ daloflow_start ()
 
 daloflow_stop ()
 {
-	# stop composition
+	# Stop composition
 	docker-compose -f Dockercompose.yml down
 
         # Remove container cluster files...
@@ -330,8 +256,7 @@ daloflow_test_node ()
 	mpirun -np 2 -machinefile /usr/src/daloflow/machines_mpi $(pwd)/cpi
 
 	# HOROVOD
-	mpirun -np 2 -machinefile machines_mpi -bind-to none -map-by slot python3 ./horovod/examples/tensorflow2_mnist.py
-	# horovodrun --verbose -np 2 -hostfile machines_horovod  python3 ./horovod/examples/tensorflow2_mnist.py
+	horovodrun --verbose -np 2 -hostfile machines_horovod  python3 ./horovod/examples/tensorflow2_mnist.py
 }
 
 
@@ -354,9 +279,6 @@ do
 	     prerequisites)
 		daloflow_prerequisites
 	     ;;
-	     postclone)
-		daloflow_postclone
-	     ;;
 
 	     # image
 	     build|image)
@@ -367,16 +289,6 @@ do
 	     ;;
 	     load)
                 daloflow_load
-	     ;;
-	     build_image)
-                daloflow_build_base_image
-		daloflow_build_derivated_image
-	     ;;
-	     build_all)
-		daloflow_build_all
-	     ;;
-	     build_node)
-		daloflow_build_node
 	     ;;
 
 	     # single node
