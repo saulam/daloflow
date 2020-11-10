@@ -4,7 +4,7 @@
 </html>
 
 ## Getting daloflow and initial setup:
-1. To clone from github
+1. To clone from github:
 ```bash
  git clone https://github.com/saulam/daloflow.git
  cd daloflow
@@ -15,27 +15,27 @@
 ```bash
  ./daloflow.sh prerequisites
 ```
-3. Build the docker image:
+3. To build the docker image:
 ```bash
  ./daloflow.sh build
 ```
   
 ## Typical daloflow work session:
-1. Start work session:
-   * Single node:
+1. To start a new work session:
+ * Using a Single node:
 ```bash
      ./daloflow.sh start <number of containers>
 ```
-   * Several nodes:
+ * Using Several nodes:
 ```bash
      ./daloflow.sh swarm-start <number of containers>
 ```
-2. Run the applications, for example for NP=2:
+2. To run the applications, for example for NP=2:
 ```bash
  ./daloflow.sh mpirun 2 "python3 ./do_tf2kp_mnist.py"
  ...
 ```
-3. Stop work session:
+3. To stop work session:
 ```bash
  ./daloflow.sh stop
 ```
