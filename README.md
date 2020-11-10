@@ -21,24 +21,44 @@
 ```
   
 ## Typical daloflow work session:
-1. To start a new work session:
- * Using a Single node:
+<html>
+ <table>
+  <tr>
+  <td>
+</html>
+
+A new single node work session:
 ```bash
-     ./daloflow.sh start <number of containers>
+   ./daloflow.sh start 4
+   ./daloflow.sh mpirun 2 "python3 ./do_tf2kp_mnist.py"
+   : ...
+   ./daloflow.sh stop
 ```
- * Using Several nodes:
+
+For example, with "./daloflow.sh start" four container is spin-up in one node, the current one (NC=4).
+Then, do_tf2kp_mnist.py was executed with 2 process (NP=2, only two containers are used).
+
+<html>
+  </td>
+  <td>
+</html>
+
+A new work session using several nodes:
 ```bash
-     ./daloflow.sh swarm-start <number of containers>
+   ./daloflow.sh swarm-start 4
+   ./daloflow.sh mpirun 2 "python3 ./do_tf2kp_mnist.py"
+   : ...
+   ./daloflow.sh stop
 ```
-2. To run the applications, for example for NP=2:
-```bash
- ./daloflow.sh mpirun 2 "python3 ./do_tf2kp_mnist.py"
- ...
-```
-3. To stop work session:
-```bash
- ./daloflow.sh stop
-```
+
+For example, with "./daloflow.sh swarm-start" a container is spin-up in four nodes (NC=4, one container per node).
+Then, do_tf2kp_mnist.py was executed with 2 process (NP=2) on the first two nodes.
+
+<html>
+  </td>
+  </tr>
+ </table>
+</html>
 
 
 ### Some additional options for debugging:
