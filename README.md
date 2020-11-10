@@ -1,6 +1,6 @@
 <html>
  <h1 align="center">daloflow: <br>DAta LOcality on tensorFLOW</h1>
- <h2 align="center"> https://github.com/saulam/daloflow </h2>
+ <br>
 </html>
 
 ## Get daloflow and setup initial stuff:
