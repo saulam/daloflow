@@ -36,7 +36,7 @@ A new single node work session:
 ```
 
 For example, with "./daloflow.sh start" four container is spin-up in one node, the current one (NC=4).
-Then, do_tf2kp_mnist.py was executed with 2 process (NP=2, only two containers are used).
+Then, do_task.py was executed with 2 process (NP=2, only two containers are used).
 
 <html>
   </td>
@@ -52,7 +52,7 @@ A new work session using several nodes:
 ```
 
 For example, with "./daloflow.sh swarm-start" a container is spin-up in four nodes (NC=4, one container per node).
-Then, do_tf2kp_mnist.py was executed with 2 process (NP=2) on the first two nodes.
+Then, do_task.py was executed with 2 process (NP=2) on the first two nodes.
 
 <html>
   </td>
