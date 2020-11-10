@@ -34,10 +34,10 @@ args = parser.parse_args()
 # configuration
 #
 
-n_images_train   = args.ntrain
-n_images_test    = args.ntest
-height           = args.height
-width            = args.width
+n_images_train   = args.ntrain[0]
+n_images_test    = args.ntest[0]
+height           = args.height[0]
+width            = args.width[0]
 dataset_name     = 'dataset' + str(height) + 'x' + str(width) + '/'
 dir_packing_each = 10000
 

@@ -32,6 +32,7 @@ N_IMG_TEST="1000"
 
 N_NODES=4
 N_PROCESS="1 2 4 8"
+N_CONVS="1 10 50"
 
 
 #
@@ -54,13 +55,21 @@ done
 echo ": : Work session..."
 echo ./daloflow.sh swarm-start $N_NODES
 
+for CONVS in $N_CONVS; do
 for NP in $N_PROCESS; do
 for S in $SIZES; do
+
     DIR_NAME="dataset"$S"x"$S
+    let IPART=$NP*$CONVS
+    let ITERS=52000/$IPART
+
     echo ": Testing dataset $DIR_NAME with $NP processes on $N_NODES nodes..."
-    echo "  ./daloflow.sh mpirun $NP \"python3 ./do_tf2kp_mnist.py --height $S --width $S --path $DIR_NAME\""
+    echo "  ./daloflow.sh mpirun $NP \"python3 ./do_tf2kp_mnist.py --height $S --width $S --path $DIR_NAME --iters $ITERS --convs $CONVS\" |& grep -v \"Read -1\""
+
+done
 done
 done
 
 echo ./daloflow.sh swarm-stop
+
 

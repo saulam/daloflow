@@ -47,26 +47,14 @@ daloflow_help ()
 	echo "  $0 swarm-start 4"
 	echo "  $0 mpirun 2 \"python3 ./do_tf2kp_mnist.py --height 32 --width 32 --path dataset32x32\""
 	echo "  ..."
-	echo "  $0 swarm-stop"
+	echo "  $0 stop"
 	echo ""
 	echo ": Available options for (single node) debugging:"
 	echo "  $0 bash <id container, from 1 up to nc>"
 	echo "  $0 docker_in_docker"
 	echo "  $0 save | load | status | test"
 	echo ""
-	echo ": Please read the README.md file for more information (github.com/saulam/daloflow/)."
-	echo ""
-}
-
-daloflow_info_no_start ()
-{
-	echo ": Please start/swarm-start first:"
-	echo ""
-        echo ": * For a typical single node work session (with 4 containers and 2 process), please execute:"
-        echo "    ./daloflow.sh start       <number of containers>"
-	echo ""
-        echo ": * For a typical multinode work session (with 4 containers and 2 process), please execute:"
-        echo "    ./daloflow.sh swarm-start <number of containers>"
+	echo ": Please read the README.md file for more information (https://github.com/saulam/daloflow/)."
 	echo ""
 }
 
@@ -146,6 +134,15 @@ daloflow_prerequisites ()
 
 daloflow_build_base_image ()
 {
+	# Check params
+        if [ ! -f Dockerfile ]; then
+            echo ": The Dockerfile file is not found."
+	    echo ": * Did you execute ./daloflow.sh init first?."
+	    echo ": * Please see ./daloflow.sh help for more information."
+	    echo ""
+            exit
+        fi
+
 	echo "Building initial image..."
 	docker image build -t daloflow:v2 .
 }
@@ -159,6 +156,14 @@ daloflow_save ()
 
 daloflow_load ()
 {
+	# Check params
+        if [ ! -f daloflow_v2.tgz ]; then
+            echo ": The daloflow_v2.tgz file is not found."
+	    echo ": * Please see ./daloflow.sh help for more information."
+	    echo ""
+            exit
+        fi
+
 	echo "Loading daloflow:v2 image..."
 	cat daloflow_v2.tgz | gunzip - | docker image load
 }
@@ -176,8 +181,22 @@ daloflow_start ()
 	     NC=1
 	fi
 
+	# Check params
+        if [ -f .daloflow_worksession ]; then
+            echo ": There is an already running daloflow container."
+	    echo ": * Please stop first."
+	    echo ": * Please see ./daloflow.sh help for more information."
+	    echo ""
+            exit
+        fi
+
 	# Start container cluster (in single node)
 	docker-compose -f Dockercompose.yml up -d --scale node=$NC
+	if [ $? -gt 0 ]; then
+            echo ": The docker-compose command failed to spin up containers."
+	    echo ""
+	    exit
+	fi
 	echo "wating $NC seconds..."
 	sleep $NC
 
@@ -190,16 +209,8 @@ daloflow_start ()
 	     chgrp daloflow machines_*
 	fi
 
-}
-
-daloflow_stop ()
-{
-	# Stop composition
-	docker-compose -f Dockercompose.yml down
-
-        # Remove container cluster files...
-	rm -fr machines_mpi
-	rm -fr machines_horovod
+	# session mode
+	echo "SINGLE_NODE" > .daloflow_worksession
 }
 
 daloflow_swarm_start ()
@@ -210,24 +221,54 @@ daloflow_swarm_start ()
              NC=1
         fi
 
+	# Check params
+        if [ -f .daloflow_worksession ]; then
+            echo ": There is an already running daloflow container."
+	    echo ": * Please stop first."
+	    echo ": * Please see ./daloflow.sh help for more information."
+	    echo ""
+            exit
+        fi
+
         # Start container cluster
         docker stack deploy --compose-file Dockerstack.yml daloflow
+	if [ $? -gt 0 ]; then
+            echo ": The docker stack deploy command failed to spin up containers."
+	    echo ""
+	    exit
+	fi
         docker service scale daloflow_node=$NC
 
         # Container cluster files...
         CONTAINER_ID_LIST=$(docker service ps daloflow_node -f desired-state=running -q)
         docker inspect -f '{{range .NetworksAttachments}}{{.Addresses}}{{end}}' $CONTAINER_ID_LIST | sed "s/^\[//g" | awk 'BEGIN {FS="/"} ; {print $1}' > machines_mpi
         cat machines_mpi | sed 's/.*/& slots=1/g' > machines_horovod
+
+	# session mode
+	echo "MULTI_NODE" > .daloflow_worksession
 }
 
-daloflow_swarm_stop ()
+daloflow_stop ()
 {
+	# get current session mode
+	MODE=""
+        if [ -f .daloflow_worksession ]; then
+	     MODE=$(cat .daloflow_worksession)
+        fi
+
+	# Stop composition
+        if [ "$MODE" == "SINGLE_NODE" ]; then
+	     docker-compose -f Dockercompose.yml down
+        fi
 	# Stop service
-	docker service rm daloflow_node
+        if [ "$MODE" == "MULTI_NODE" ]; then
+	     docker service rm daloflow_node
+        fi
 
         # Remove container cluster files...
 	rm -fr machines_mpi
 	rm -fr machines_horovod
+	rm -fr .daloflow_worksession
 }
 
 daloflow_run ()
@@ -240,12 +281,21 @@ daloflow_run ()
 
 	# Check parameters
 	if [ "x$CNAME" == "x" ]; then
-            daloflow_welcome
-            daloflow_info_no_start
+            echo ": There is not a running daloflow container."
+	    echo ": * Please start/swarm-start first."
+	    echo ": * Please see ./daloflow.sh help for more information."
+	    echo ""
+            exit
+	fi
+	if [ ! -f machines_horovod ]; then
+            echo ": The machines_horovod file was not found."
+	    echo ": * Please start/swarm-start first."
+	    echo ": * Please see ./daloflow.sh help for more information."
+	    echo ""
             exit
 	fi
 
-        # daloflow:v2 in TUCAN
+        # daloflow:v2
 	docker container exec -it $CNAME     \
 	       mpirun -np $NP -machinefile machines_horovod \
 		      -bind-to none -map-by slot -verbose --allow-run-as-root \
@@ -258,15 +308,33 @@ daloflow_run ()
 
 daloflow_bash_node ()
 {
+	# Get parameters
+	CIP=$(head -$1 machines_mpi | tail -1)
+	CNAME=$(docker ps -f name=daloflow -q | head -1)
+	NN=$(wc -l machines_mpi  | awk '{print $1}')
+
 	# Check parameters
 	if [ ! -f machines_mpi ]; then
-            daloflow_welcome
-            daloflow_info_no_start
+            echo ": The machines_mpi file was not found."
+	    echo ": * Please start/swarm-start first."
+	    echo ": * Please see ./daloflow.sh help for more information."
+	    echo ""
+            exit
+	fi
+	if [ "x$CIP" == "x" ]; then
+	    echo ": The node ID $1 is out of range (1 up to $NN)."
+	    echo ": * Please see ./daloflow.sh help for more information."
+	    echo ""
+            exit
+	fi
+	if [ "x$CNAME" == "x" ]; then
+            echo ": There is not a running daloflow container."
+	    echo ": * Please start/swarm-start first."
+	    echo ": * Please see ./daloflow.sh help for more information."
+	    echo ""
             exit
 	fi
 
-	CIP=$(head -$1 machines_mpi | tail -1)
-	CNAME=$(docker ps -f name=daloflow -q | head -1)
 	docker container exec -it $CNAME /usr/bin/ssh $CIP
 }
 
@@ -347,7 +415,7 @@ do
 		daloflow_swarm_start $@
 	     ;;
 	     swarm-stop)
-                daloflow_swarm_stop
+                daloflow_stop
 	     ;;
 
 	     # mpirun + bash
