@@ -133,6 +133,8 @@ void * th_copy_from_hdfs_to_local ( void *arg )
        char          * msg ;
        struct th_args  thargs ;
        char            file_name_dst[2*PATH_MAX] ;
+       char            file_name_org[2*PATH_MAX] ;
+       char              ln_name_org[2*PATH_MAX] ;
        char        *** blocks_information;
        int             is_remote ;
 
@@ -150,20 +152,30 @@ void * th_copy_from_hdfs_to_local ( void *arg )
            pthread_exit((void *)0) ;
        }
 
-       // If local file then exit
+       // Set the initial org/dst file name...
+       sprintf(file_name_org, "%s",    basename(thargs.file_name_org)) ;
+       sprintf(file_name_dst, "%s/%s", thargs.destination_dir, file_name_org) ;
+
+       // If local file then symlink, else copy from hdfs
        is_remote = strncmp(thargs.machine_name, blocks_information[0][0], strlen(thargs.machine_name)) ;
-       if (0 == is_remote) {
-           pthread_exit((void *)0) ;
+       if (0 == is_remote)
+       {
+           sprintf(ln_name_org, "%s/../fuse/%s", thargs.destination_dir, file_name_org) ;
+           ret = symlink(file_name_dst, ln_name_org) ;
+           if (ret < 0) { perror("symlink: ") ; }
+       }
+       else
+       {
+           ret = copy_from_to(thargs.fs, thargs.file_name_org, file_name_dst, BUFFER_SIZE) ;
        }
 
-       // Try to copy hdfs file
-       sprintf(file_name_dst, "%s/%s", thargs.destination_dir, basename(thargs.file_name_org)) ;
-       printf("Try to copy file '%s' from node '%s' to node '%s'...\n",
-              thargs.file_name_org, blocks_information[0][0], thargs.machine_name) ;
-
-       ret = copy_from_to(thargs.fs, thargs.file_name_org, file_name_dst, BUFFER_SIZE) ;
-       msg = (ret < 0) ? " Error found" : " Done" ;
-       printf("%s", msg) ;
+       // Show message...
+       msg = (ret < 0) ? "Error found" : "Done" ;
+       printf("'%s' from node '%s' to node '%s': %s\n",
+              thargs.file_name_org,
+              blocks_information[0][0],
+              thargs.machine_name,
+              msg) ;
 
        // The End
        pthread_exit((void *)(long)ret) ;
