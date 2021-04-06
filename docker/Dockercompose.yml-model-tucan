@@ -1,8 +1,10 @@
-
 version: "3.8"
 
 services:
   node:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
     image: daloflow:v2
     volumes:
       - type: bind
@@ -17,14 +19,14 @@ services:
       - type: bind
         source: /mnt/gluster-replicated
         target: /mnt/gluster-replicated
-    #runtime: nvidia
+    runtime: nvidia
     networks:
       - backend
 
 networks:
   backend:
-    #driver: bridge
-    ipam:
-      config:
-        - subnet: 192.168.0.0/16
+    driver: bridge
+    #ipam:
+    #  config:
+    #    - subnet: 192.168.0.0/16
 
