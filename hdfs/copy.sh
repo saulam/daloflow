@@ -2,30 +2,30 @@
 set -x
 
 #
-# Config.
+# Get configuration
 #
-BASE_CACHE=/mnt/local-storage/daloflow/dataset/
-LIST_CACHE=$BASE_CACHE/list.txt
 
-
-#
-# Cache files
-#
+BASE_DIR=$(dirname "$0")
+. $BASE_DIR/config.copy
 
 if [ ! -d "$BASE_CACHE" ]; then
-	echo "Directory not found: $BASE_CACHE"
-	exit
+        echo "Directory not found: $BASE_CACHE"
+        exit
 fi
 
 if [ ! -f "$LIST_CACHE" ]; then
-	echo "File not found: $LIST_CACHE"
-	exit
+        echo "File not found: $LIST_CACHE"
+        exit
 fi
 
 
-# remove old "train*.tar.gz" files at /mnt/local-storage/daloflow/dataset/
+#
+# Copy files into a local directory ($BASE_CACHE)
+#
+
+# Remove old "train*.tar.gz" files at /mnt/local-storage/daloflow/dataset/
 find $BASE_CACHE -name "train*.tar.gz" -exec rm  {} \;
 
-# copy new files
-./hdfs-cp.sh $LIST_CACHE $BASE_CACHE
+# Copy new files
+$BASE_DIR/hdfs-cp.sh $LIST_CACHE $BASE_CACHE
 

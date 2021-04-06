@@ -1,25 +1,24 @@
 #!/bin/bash
 #set -x
 
-# For HADOOP (José)
-export PATH=/mnt/local-storage/prueba-hdfs/hadoop/bin:/usr/lib/jvm/java-8-openjdk-amd64/bin:$PATH
-export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre
-export HADOOP_INSTALL=/mnt/local-storage/prueba-hdfs/hadoop
-export PATH=$PATH:/mnt/local-storage/prueba-hdfs/hadoop/bin:/mnt/local-storage/prueba-hdfs/hadoop/sbin
-export HADOOP_MAPRED_HOME=$HADOOP_INSTALL
-export HADOOP_COMMON_HOME=$HADOOP_INSTALL
-export HADOOP_HDFS_HOME=$HADOOP_INSTALL
-export YARN_HOME=$HADOOP_INSTALL
-export HADOOP_COMMON_LIB_NATIVE=$HADOOP_INSTALL/lib/native
-export HADOOP_OPTS="-Djava.library.path=$HADOOP_INSTALL/lib"
+# Load default configuration
+. ./config.hdfs-cp
+
+# For HADOOP (JosÃ©)
+export PATH=$BASE_HDFS/bin:$BASE_JAVA/bin::$BASE_JAVA/sbin:$PATH
+export JAVA_HOME=$BASE_JAVA/jre
+export HADOOP_INSTALL=$BASE_HDFS
+export HADOOP_MAPRED_HOME=$BASE_HDFS
+export HADOOP_COMMON_HOME=$BASE_HDFS
+export HADOOP_HDFS_HOME=$BASE_HDFS
+export YARN_HOME=$BASE_HDFS
+export HADOOP_COMMON_LIB_NATIVE=$BASE_HDFS/lib/native
+export HADOOP_OPTS="-Djava.library.path=$BASE_HDFS/lib"
 export HADOOP_PORT=0
 
-# LD_LIBRARY_PATH
-FULL_LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/jrivadeneira/lib-hdfs/lib:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server
-
-# CLASSPATH
-FULL_CLASSPATH=$CLASSPATH:/home/jrivadeneira/Documentos/jar-hdfs
-FULL_CLASSPATH=$FULL_CLASSPATH:$(hadoop classpath --glob)
+# LD_LIBRARY_PATH + CLASSPATH
+FULL_LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$BASE_LIBHDFS/lib:$BASE_JAVA/jre/lib/amd64/server
+FULL_CLASSPATH=$CLASSPATH:$(hadoop classpath --glob)
 
 
 # bind everything all together
