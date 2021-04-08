@@ -14,6 +14,9 @@ services:
      #  source: /mnt/local-storage/daloflow
      #  target: /usr/src/daloflow
       - type: bind
+        source: /mnt/local-storage
+        target: /mnt/local-storage
+      - type: bind
         source: /mnt/gluster-distributed
         target: /mnt/gluster-distributed
       - type: bind

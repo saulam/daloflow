@@ -2,7 +2,8 @@
 #set -x
 
 # Load default configuration
-. ./config.hdfs-cp
+BASE_DIR=$(dirname "$0")
+. $BASE_DIR/config.hdfs-cp
 
 # For HADOOP (José)
 export PATH=$BASE_HDFS/bin:$BASE_JAVA/bin::$BASE_JAVA/sbin:$PATH
@@ -22,5 +23,5 @@ FULL_CLASSPATH=$CLASSPATH:$(hadoop classpath --glob)
 
 
 # bind everything all together
-env CLASSPATH=$FULL_CLASSPATH LD_LIBRARY_PATH=$FULL_LD_LIBRARY_PATH ./hdfs-cp $@
+env CLASSPATH=$FULL_CLASSPATH LD_LIBRARY_PATH=$FULL_LD_LIBRARY_PATH $BASE_DIR/hdfs-cp $@
 
