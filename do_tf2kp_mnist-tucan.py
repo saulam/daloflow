@@ -20,33 +20,21 @@ import os
 from   data_generator import DataGenerator
 import pickle as pk
 import argparse
-
-
-'''
-* Default configuration
-'''
+import time
+from tensorflow.keras.callbacks import Callback
 
 # manually specify the GPUs to use
 os.environ["CUDA_DEVICE_ORDER"]    = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 
-# default path
-default_path  = '/mnt/local-storage/daloflow/dataset32x32'
-channels      = 1
-batch_size    = 32
-shuffle       = True
-
-
-'''
-* Command line arguments
-'''
-
 parser = argparse.ArgumentParser(description='Build dataset.')
-parser.add_argument('--height',  type=int, default=32,           nargs=1, required=False, help='an integer for the height')
-parser.add_argument('--width',   type=int, default=32,           nargs=1, required=False, help='an integer for the width')
-parser.add_argument('--path',    type=str, default=default_path, nargs=1, required=False, help='dataset path')
+parser.add_argument('--height',  type=int, default=32,        nargs=1, required=False, help='an integer for the height')
+parser.add_argument('--width',   type=int, default=32,        nargs=1, required=False, help='an integer for the width')
+parser.add_argument('--path',    type=str, default='/mnt/local-storage/daloflow/dataset32x32', nargs=1, required=False, help='dataset path')
+parser.add_argument('--cache',   type=str, default='nocache', nargs=1, required=False, help='dataset cache path')
+parser.add_argument('--convs',   type=int, default='1',       nargs=1, required=False, help='number of conv layers')
+parser.add_argument('--iters',   type=int, default='1000',    nargs=1, required=False, help='number of iterations per epoch')
 args = parser.parse_args()
-
 
 #
 # Configuration (by command line switches)
@@ -54,13 +42,23 @@ args = parser.parse_args()
 
 height           = int(args.height[0])
 width            = int(args.width[0])
+convs            = int(args.convs[0])
+iters            = int(args.iters[0])
 images_path      = args.path[0]
+cache_path       = args.cache[0]
+channels         = 1
+batch_size       = 32
+shuffle          = True
 
+class TimingCallback(Callback):
+  def __init__(self):
+    self.logs=[]
+  def on_epoch_begin(self, epoch, logs={}):
+    self.starttime=time.time()
+  def on_epoch_end(self, epoch, logs={}):
+    self.logs.append(time.time()-self.starttime)
 
-'''
-* train and validation params
-'''
-
+# train and validation params
 TRAIN_PARAMS = {'height':height,
                 'width':width,
                 'channels':channels,
@@ -68,42 +66,64 @@ TRAIN_PARAMS = {'height':height,
                 'images_path':images_path,
                 'shuffle':shuffle}
 
-with open(images_path+'/labels.p', 'rb') as fd:
-    labels_train, labels_test = pk.load(fd)
+# resources
+hostname  = socket.gethostname()
+local_ip  = socket.gethostbyname(hostname)
+file_name = images_path + '/labels.p'
+try:
+    with open(file_name, 'rb') as fd:
+         labels_train, labels_test = pk.load(fd)
+except:
+    print("Error: file " + file_name + " couldn't be opened on " + local_ip)
 
 nevents=len(list(labels_train.keys()))
 partition = {'train' : list(labels_train.keys()), 'validation' : list(labels_test.keys())}
 
-'''
-base_dir = "dataset-cache/"
+# daloflow-a2: copy from hdfs to local
+if True:
+    # cache_path <= '/user/jrivadeneira/daloflow/dataset32x32/:dataset-cache/dataset32x32/'
+    cache_parts  = cache_path.split(':')
+    can_continue = (len(cache_parts) == 2)
 
-f = open(base_dir + "list.txt", "w")
-f.write(images_path + '/labels.p\n')
-for item in partition['train']:
-    f.write(images_path + '/'.join(item.split('/')[1:]) + '.tar.gz\n')
-f.close()
+    # param to choose if we want local copy or not
+    if can_continue:
+       hdfs_dir  = cache_parts[0]
+       cache_dir = cache_parts[1]
+       hdfs_list = cache_dir + "/list.txt"
 
-os.system("hdfs/hdfs-cp.sh " + base_dir + "list.txt " + base_dir + images_path)
-TRAIN_PARAMS['images_path'] = base_dir + images_path
+    # list of files to copy in local
+    if can_continue:
+       with open(hdfs_list, "w") as f:
+           f.write(hdfs_dir + '/labels.p\n')
+           for item in partition['train']:
+               f.write(hdfs_dir + '/'.join(item.split('/')[1:]) + '.tar.gz\n')
+           f.close()
+
+    # copy from hdfs to local
+    if can_continue:
+       status = os.system("mkdir -p " + cache_dir)
+       can_continue = os.WIFEXITED(status) and (os.WEXITSTATUS(status) == 0)
+
+    if can_continue:
+       status = os.system("hdfs/hdfs-cp.sh" + " " + hdfs_list + " " + cache_dir)
+       can_continue = os.WIFEXITED(status) and (os.WEXITSTATUS(status) == 0)
+
+    if can_continue:
+       TRAIN_PARAMS['images_path'] = cache_base_dir + images_path
+    else:
+       print("CACHE: unable to cache files\n")
+#
+
+'''
+************** GENERATORS **************
 '''
 
-'''
-* GENERATORS
-'''
-
-training_generator = DataGenerator(**TRAIN_PARAMS).generate(labels_train, partition['train'], True)
-validation_generator = DataGenerator(**TRAIN_PARAMS).generate(labels_test, partition['validation'], True)
-
-
-'''
-* Main
-'''
+training_generator   = DataGenerator(**TRAIN_PARAMS).generate(labels_train, partition['train'],      True)
+validation_generator = DataGenerator(**TRAIN_PARAMS).generate(labels_test,  partition['validation'], True)
 
 # Horovod: initialize Horovod.
 hvd.init()
 
-hostname = socket.gethostname()
-local_ip = socket.gethostbyname(hostname)
 print('%s, %d' % (local_ip, hvd.local_rank()))
 
 # Horovod: pin GPU to be used to process local rank (one GPU per process)
@@ -113,13 +133,24 @@ for gpu in gpus:
 if gpus:
     tf.config.experimental.set_visible_devices(gpus[hvd.local_rank()], 'GPU')
 
+'''
+(mnist_images, mnist_labels), _ = \
+    tf.keras.datasets.mnist.load_data(path='mnist-%d.npz' % hvd.rank())
+
+dataset = tf.data.Dataset.from_tensor_slices(
+    (tf.cast(mnist_images[..., tf.newaxis] / 255.0, tf.float32),
+             tf.cast(mnist_labels, tf.int64))
+)
+dataset = dataset.repeat().shuffle(10000).batch(128)
+'''
 
 input_shape = [height,width,channels]
 img_input = tf.keras.layers.Input(shape=input_shape, name='input')
 x = tf.keras.layers.Conv2D(32, [3, 3], activation='relu')(img_input)
-for i in range(10):
-    x = tf.keras.layers.Conv2D(64, [3, 3], activation='relu')(x)
-    #x = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(x)
+for i in range(convs):
+    x = tf.keras.layers.Conv2D(64, [3, 3], activation='relu', padding='same')(x)
+    if convs==1:
+        x = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(x)
     x = tf.keras.layers.Dropout(0.25)(x)
 x = tf.keras.layers.Flatten()(x)
 x = tf.keras.layers.Dense(128, activation='relu')(x)
@@ -127,7 +158,18 @@ x = tf.keras.layers.Dropout(0.5)(x)
 x = tf.keras.layers.Dense(10, activation='softmax')(x)
 mnist_model = tf.keras.models.Model(inputs=img_input, outputs=x, name='my_model')
 mnist_model.summary()
-
+'''
+mnist_model = tf.keras.Sequential([
+    tf.keras.layers.Conv2D(32, [3, 3], activation='relu'),
+    tf.keras.layers.Conv2D(64, [3, 3], activation='relu'),
+    tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+    tf.keras.layers.Dropout(0.25),
+    tf.keras.layers.Flatten(),
+    tf.keras.layers.Dense(128, activation='relu'),
+    tf.keras.layers.Dropout(0.5),
+    tf.keras.layers.Dense(10, activation='softmax')
+])
+'''
 
 # Horovod: adjust learning rate based on number of GPUs.
 opt = tf.optimizers.Adam(0.001 * hvd.size())
@@ -163,6 +205,8 @@ callbacks = [
 # Horovod: save checkpoints only on worker 0 to prevent other workers from corrupting them.
 if hvd.rank() == 0:
     callbacks.append(tf.keras.callbacks.ModelCheckpoint('./checkpoint-{epoch}.h5'))
+    cb = TimingCallback()
+    callbacks.append(cb)
 
 # Horovod: write logs on worker 0.
 verbose = 1 if hvd.rank() == 0 else 0
@@ -171,5 +215,11 @@ verbose = 1 if hvd.rank() == 0 else 0
 # Horovod: adjust number of steps based on number of GPUs.
 #mnist_model.fit(dataset, steps_per_epoch=10 // hvd.size(), callbacks=callbacks, epochs=24, verbose=verbose)
 steps_per_epoch=nevents//batch_size
-mnist_model.fit(x=training_generator, steps_per_epoch=steps_per_epoch // hvd.size(), callbacks=callbacks, epochs=24, verbose=verbose)
+
+mnist_model.fit(x=training_generator, steps_per_epoch=iters // hvd.size(), callbacks=callbacks, epochs=1, verbose=verbose)
+
+if hvd.rank() == 0:
+    with open('output.txt', 'a') as fd:
+        fd.write(str(height)+'x'+str(width)+' '+str(convs)+' '+str(hvd.size()) + ' '+str(32150.*cb.logs[0]/iters)+' s\n')
+
 

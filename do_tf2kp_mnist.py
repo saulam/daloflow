@@ -78,8 +78,8 @@ partition = {'train' : list(labels_train.keys()), 'validation' : list(labels_tes
 * GENERATORS
 '''
 
-training_generator = DataGenerator(**TRAIN_PARAMS).generate(labels_train, partition['train'], True)
-validation_generator = DataGenerator(**TRAIN_PARAMS).generate(labels_test, partition['validation'], True)
+training_generator   = DataGenerator(**TRAIN_PARAMS).generate(labels_train, partition['train'],      True)
+validation_generator = DataGenerator(**TRAIN_PARAMS).generate(labels_test,  partition['validation'], True)
 
 
 '''
