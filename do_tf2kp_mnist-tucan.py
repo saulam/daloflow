@@ -17,15 +17,15 @@ import tensorflow as tf
 import horovod.tensorflow.keras as hvd
 import socket
 import os
-from   data_generator import DataGenerator
+from data_generator import DataGenerator
 import pickle as pk
 import argparse
 import time
 from tensorflow.keras.callbacks import Callback
 
 # manually specify the GPUs to use
-os.environ["CUDA_DEVICE_ORDER"]    = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"]="0,1"
 
 parser = argparse.ArgumentParser(description='Build dataset.')
 parser.add_argument('--height',  type=int, default=32,        nargs=1, required=False, help='an integer for the height')
@@ -37,7 +37,7 @@ parser.add_argument('--iters',   type=int, default='1000',    nargs=1, required=
 args = parser.parse_args()
 
 #
-# Configuration (by command line switches)
+# configuration
 #
 
 height           = int(args.height[0])
@@ -79,39 +79,38 @@ except:
 nevents=len(list(labels_train.keys()))
 partition = {'train' : list(labels_train.keys()), 'validation' : list(labels_test.keys())}
 
-# daloflow-a2: copy from hdfs to local
-if True:
-    # cache_path <= '/user/jrivadeneira/daloflow/dataset32x32/:dataset-cache/dataset32x32/'
-    cache_parts  = cache_path.split(':')
-    can_continue = (len(cache_parts) == 2)
-
+# Copy from hdfs to local
+# Example of cache_path:
+# '/user/jrivadeneira/daloflow/dataset32x32/:/mnt/local-storage/daloflow/dataset-cache/dataset32x32/'
+cache_parts = cache_path.split(':')
+can_continue_with_cache = (len(cache_parts) == 2)
+if can_continue_with_cache:
     # param to choose if we want local copy or not
-    if can_continue:
-       hdfs_dir  = cache_parts[0]
-       cache_dir = cache_parts[1]
-       hdfs_list = cache_dir + "/list.txt"
+    hdfs_dir  = cache_parts[0]
+    cache_dir = cache_parts[1]
+    hdfs_list = cache_dir + "/list.txt"
+
+    if can_continue_with_cache:
+       status = os.system("mkdir -p " + cache_dir)
+       can_continue_with_cache = os.WIFEXITED(status) and (os.WEXITSTATUS(status) == 0)
 
     # list of files to copy in local
-    if can_continue:
+    if can_continue_with_cache:
        with open(hdfs_list, "w") as f:
-           f.write(hdfs_dir + '/labels.p\n')
+           f.write(hdfs_dir + 'labels.p\n')
            for item in partition['train']:
                f.write(hdfs_dir + '/'.join(item.split('/')[1:]) + '.tar.gz\n')
            f.close()
 
     # copy from hdfs to local
-    if can_continue:
-       status = os.system("mkdir -p " + cache_dir)
-       can_continue = os.WIFEXITED(status) and (os.WEXITSTATUS(status) == 0)
-
-    if can_continue:
+    if can_continue_with_cache:
        status = os.system("hdfs/hdfs-cp.sh" + " " + hdfs_list + " " + cache_dir)
-       can_continue = os.WIFEXITED(status) and (os.WEXITSTATUS(status) == 0)
+       can_continue_with_cache = os.WIFEXITED(status) and (os.WEXITSTATUS(status) == 0)
 
-    if can_continue:
+    if can_continue_with_cache:
        TRAIN_PARAMS['images_path'] = cache_base_dir + images_path
     else:
-       print("CACHE: unable to cache files\n")
+       print("CACHE: cache from HDFS is not enabled.\n")
 #
 
 '''
