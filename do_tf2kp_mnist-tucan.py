@@ -108,7 +108,7 @@ if can_continue_with_cache:
        can_continue_with_cache = os.WIFEXITED(status) and (os.WEXITSTATUS(status) == 0)
 
     if can_continue_with_cache:
-       TRAIN_PARAMS['images_path'] = cache_base_dir + images_path
+       TRAIN_PARAMS['images_path'] = cache_dir
     else:
        print("CACHE: cache from HDFS is not enabled.\n")
 #
