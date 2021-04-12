@@ -47,7 +47,9 @@ int copy_from_to ( hdfsFS fs, char *file_name_org, char *file_name_dst, long buf
 
      buffer = malloc(buffer_size) ;
      if (NULL == buffer) {
+#ifdef DEBUG
          fprintf(stderr, "ERROR: malloc for '%ld'.\n", buffer_size) ;
+#endif
          return -1 ;
      }
 
@@ -55,7 +57,9 @@ int copy_from_to ( hdfsFS fs, char *file_name_org, char *file_name_dst, long buf
      hdfsFile read_file = hdfsOpenFile(fs, file_name_org, O_RDONLY, 0, 0, 0) ;
      if (!read_file) {
          free(buffer) ;
+#ifdef DEBUG
          fprintf(stderr, "ERROR: hdfsOpenFile on '%s' for reading.\n", file_name_org) ;
+#endif
          return -1 ;
      }
 
@@ -68,8 +72,17 @@ int copy_from_to ( hdfsFS fs, char *file_name_org, char *file_name_dst, long buf
                                      read_remaining_bytes) ;
          if (num_readed_bytes == -1) {
              free(buffer) ;
+#ifdef DEBUG
              fprintf(stderr, "ERROR: hdfsRead fails to read data.\n") ;
+#endif
              return -1 ;
+         }
+         if (num_readed_bytes == 0) {
+#ifdef DEBUG
+             fprintf(stderr, "WARNING: file smaller than %ld bytes.\n", buffer_size) ;
+#endif
+	     buffer_size = buffer_size - read_remaining_bytes ;
+	     break ;
          }
 
          read_remaining_bytes -= num_readed_bytes ;
@@ -81,7 +94,9 @@ int copy_from_to ( hdfsFS fs, char *file_name_org, char *file_name_dst, long buf
      int write_fd = open(file_name_dst, O_WRONLY | O_CREAT, 0700) ;
      if (write_fd < 0) {
          free(buffer) ;
+#ifdef DEBUG
          fprintf(stderr, "ERROR: open fails to create '%s' file.\n", file_name_dst) ;
+#endif
          return -1 ;
      }
 
@@ -94,7 +109,9 @@ int copy_from_to ( hdfsFS fs, char *file_name_org, char *file_name_dst, long buf
                                  write_remaining_bytes) ;
          if (write_num_bytes == -1) {
              free(buffer) ;
+#ifdef DEBUG
              fprintf(stderr, "ERROR: write fails to write data.\n") ;
+#endif
              return -1 ;
          }
 
@@ -148,7 +165,9 @@ void * th_copy_from_hdfs_to_local ( void *arg )
        // Get HDFS information
        blocks_information = hdfsGetHosts(thargs.fs, thargs.file_name_org, 0, BLOCKSIZE) ;
        if (NULL == blocks_information) {
+#ifdef DEBUG
            fprintf(stderr, "ERROR: hdfsGetHosts for '%s'.\n", thargs.file_name_org) ;
+#endif
            pthread_exit((void *)0) ;
        }
 
@@ -171,11 +190,13 @@ void * th_copy_from_hdfs_to_local ( void *arg )
 
        // Show message...
        msg = (ret < 0) ? "Error found" : "Done" ;
+#ifdef DEBUG
        printf("'%s' from node '%s' to node '%s': %s\n",
               thargs.file_name_org,
               blocks_information[0][0],
               thargs.machine_name,
               msg) ;
+#endif
 
        // The End
        pthread_exit((void *)(long)ret) ;
