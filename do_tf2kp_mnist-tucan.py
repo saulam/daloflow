@@ -97,14 +97,14 @@ if can_continue_with_cache:
     # list of files to copy in local
     if can_continue_with_cache:
        with open(hdfs_list, "w") as f:
-           f.write(hdfs_dir + 'labels.p\n')
+           f.write('labels.p\n')
            for item in partition['train']:
-               f.write(hdfs_dir + '/'.join(item.split('/')[1:]) + '.tar.gz\n')
+               f.write(join(item.split('/')[1:]) + '.tar.gz\n')
            f.close()
 
     # copy from hdfs to local
     if can_continue_with_cache:
-       status = os.system("hdfs/hdfs-cp.sh" + " " + hdfs_list + " " + cache_dir)
+       status = os.system("hdfs/hdfs-cp.sh" + " " + hdfs_dir + " " + hdfs_list + " " + cache_dir)
        can_continue_with_cache = os.WIFEXITED(status) and (os.WEXITSTATUS(status) == 0)
 
     if can_continue_with_cache:

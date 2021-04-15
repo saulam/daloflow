@@ -27,5 +27,5 @@ fi
 find $BASE_CACHE -name "train*.tar.gz" -exec rm  {} \;
 
 # Copy new files
-$BASE_DIR/hdfs-cp.sh $LIST_CACHE $BASE_CACHE
+$BASE_DIR/hdfs-cp.sh $BASE_HDFS $LIST_CACHE $BASE_CACHE
 

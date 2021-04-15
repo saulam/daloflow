@@ -30,10 +30,18 @@
 #include <limits.h>
 #include <libgen.h>
 #include <pthread.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include "hdfs.h"
 
 #define BUFFER_SIZE   (4 * 1024 * 1024)
 #define BLOCKSIZE    (64 * 1024 * 1024)
+
+#ifdef DEBUG
+#define DEBUG_PRINT(fmt, args...)    fprintf(stderr, fmt, ## args)
+#else
+#define DEBUG_PRINT(fmt, args...)    /* Don't do anything in release builds */
+#endif
 
 
 /*
@@ -44,12 +52,13 @@ int copy_from_to ( hdfsFS fs, char *file_name_org, char *file_name_dst, long buf
 {
      // local buffer for future threads
      unsigned char *buffer ;
+     struct stat  st  = {0} ;
+     char         basename_org[PATH_MAX] ;
+     char        *dirname_org ;
 
      buffer = malloc(buffer_size) ;
      if (NULL == buffer) {
-#ifdef DEBUG
-         fprintf(stderr, "ERROR: malloc for '%ld'.\n", buffer_size) ;
-#endif
+         DEBUG_PRINT("ERROR: malloc for '%ld'.\n", buffer_size) ;
          return -1 ;
      }
 
@@ -57,9 +66,7 @@ int copy_from_to ( hdfsFS fs, char *file_name_org, char *file_name_dst, long buf
      hdfsFile read_file = hdfsOpenFile(fs, file_name_org, O_RDONLY, 0, 0, 0) ;
      if (!read_file) {
          free(buffer) ;
-#ifdef DEBUG
-         fprintf(stderr, "ERROR: hdfsOpenFile on '%s' for reading.\n", file_name_org) ;
-#endif
+         DEBUG_PRINT("ERROR: hdfsOpenFile on '%s' for reading.\n", file_name_org) ;
          return -1 ;
      }
 
@@ -72,15 +79,11 @@ int copy_from_to ( hdfsFS fs, char *file_name_org, char *file_name_dst, long buf
                                      read_remaining_bytes) ;
          if (num_readed_bytes == -1) {
              free(buffer) ;
-#ifdef DEBUG
-             fprintf(stderr, "ERROR: hdfsRead fails to read data.\n") ;
-#endif
+             DEBUG_PRINT("ERROR: hdfsRead fails to read data.\n") ;
              return -1 ;
          }
          if (num_readed_bytes == 0) {
-#ifdef DEBUG
-             fprintf(stderr, "WARNING: file smaller than %ld bytes.\n", buffer_size) ;
-#endif
+             DEBUG_PRINT("WARNING: file smaller than %ld bytes.\n", buffer_size) ;
 	     buffer_size = buffer_size - read_remaining_bytes ;
 	     break ;
          }
@@ -91,12 +94,16 @@ int copy_from_to ( hdfsFS fs, char *file_name_org, char *file_name_dst, long buf
      hdfsCloseFile(fs, read_file) ;
 
      /* Write data to local file */
+     strcpy(basename_org, file_name_dst) ;
+     dirname_org = dirname(basename_org) ;
+     if (stat(dirname_org, &st) == -1) {
+         mkdir(dirname_org, 0700);
+     }
+
      int write_fd = open(file_name_dst, O_WRONLY | O_CREAT, 0700) ;
      if (write_fd < 0) {
          free(buffer) ;
-#ifdef DEBUG
-         fprintf(stderr, "ERROR: open fails to create '%s' file.\n", file_name_dst) ;
-#endif
+         DEBUG_PRINT("ERROR: open fails to create '%s' file.\n", file_name_dst) ;
          return -1 ;
      }
 
@@ -109,9 +116,7 @@ int copy_from_to ( hdfsFS fs, char *file_name_org, char *file_name_dst, long buf
                                  write_remaining_bytes) ;
          if (write_num_bytes == -1) {
              free(buffer) ;
-#ifdef DEBUG
-             fprintf(stderr, "ERROR: write fails to write data.\n") ;
-#endif
+             DEBUG_PRINT("ERROR: write fails to write data.\n") ;
              return -1 ;
          }
 
@@ -139,6 +144,7 @@ pthread_mutex_t sync_mutex ;
 
 struct th_args {
        hdfsFS    fs ;
+       char      hdfs_path_org   [PATH_MAX] ;
        char      file_name_org   [PATH_MAX] ;
        char      machine_name    [HOST_NAME_MAX + 1] ;
        char      destination_dir [PATH_MAX] ;
@@ -162,41 +168,38 @@ void * th_copy_from_hdfs_to_local ( void *arg )
        pthread_cond_signal(&sync_cond) ;
        pthread_mutex_unlock(&sync_mutex) ;
 
+       // Set the initial org/dst file name...
+       sprintf(file_name_org, "%s/%s", thargs.hdfs_path_org,   thargs.file_name_org) ;
+       sprintf(file_name_dst, "%s/%s", thargs.destination_dir, thargs.file_name_org) ;
+
        // Get HDFS information
-       blocks_information = hdfsGetHosts(thargs.fs, thargs.file_name_org, 0, BLOCKSIZE) ;
+       blocks_information = hdfsGetHosts(thargs.fs, file_name_org, 0, BLOCKSIZE) ;
        if (NULL == blocks_information) {
-#ifdef DEBUG
-           fprintf(stderr, "ERROR: hdfsGetHosts for '%s'.\n", thargs.file_name_org) ;
-#endif
+           DEBUG_PRINT("ERROR: hdfsGetHosts for '%s'.\n", thargs.file_name_org) ;
            pthread_exit((void *)0) ;
        }
-
-       // Set the initial org/dst file name...
-       sprintf(file_name_org, "%s",    basename(thargs.file_name_org)) ;
-       sprintf(file_name_dst, "%s/%s", thargs.destination_dir, file_name_org) ;
 
        // If local file then symlink, else copy from hdfs
        is_remote = strncmp(thargs.machine_name, blocks_information[0][0], strlen(thargs.machine_name)) ;
        if (0 == is_remote)
-       {
+       { 
+           // TODO: fuse dir as param...
            sprintf(ln_name_org, "%s/../fuse/%s", thargs.destination_dir, file_name_org) ;
            ret = symlink(file_name_dst, ln_name_org) ;
            if (ret < 0) { perror("symlink: ") ; }
        }
        else
        {
-           ret = copy_from_to(thargs.fs, thargs.file_name_org, file_name_dst, BUFFER_SIZE) ;
+           ret = copy_from_to(thargs.fs, file_name_org, file_name_dst, BUFFER_SIZE) ;
        }
 
        // Show message...
        msg = (ret < 0) ? "Error found" : "Done" ;
-#ifdef DEBUG
-       printf("'%s' from node '%s' to node '%s': %s\n",
-              thargs.file_name_org,
-              blocks_information[0][0],
-              thargs.machine_name,
-              msg) ;
-#endif
+       DEBUG_PRINT("'%s' from node '%s' to node '%s': %s\n",
+                   thargs.file_name_org,
+                   blocks_information[0][0],
+                   thargs.machine_name,
+                   msg) ;
 
        // The End
        pthread_exit((void *)(long)ret) ;
@@ -230,14 +233,15 @@ int main ( int argc, char* argv[] )
     void  *retval ;
 
     // Check arguments
-    if (argc != 3) {
-        printf("Usage: %s <file> <path>\n", argv[0]) ;
+    if (argc != 4) {
+        printf("Usage: %s <hdfs/path> <file_list.txt> <cache/path>\n", argv[0]) ;
         exit(-1) ;
     }
 
     // Initialize th_args...
     bzero(&th_args, sizeof(struct th_args)) ;
-    strcpy(th_args.destination_dir, argv[2]) ;
+    strcpy(th_args.hdfs_path_org,   argv[1]) ;
+    strcpy(th_args.destination_dir, argv[3]) ;
     gethostname(th_args.machine_name, HOST_NAME_MAX + 1) ;
 
     // HFDS connect
@@ -248,7 +252,7 @@ int main ( int argc, char* argv[] )
     }
 
     // Open listing file
-    FILE *list_fd = fopen(argv[1], "ro") ;
+    FILE *list_fd = fopen(argv[2], "ro") ;
     if (NULL == list_fd) {
         hdfsDisconnect(th_args.fs) ;
         perror("fopen: ") ;

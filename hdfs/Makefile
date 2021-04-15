@@ -19,5 +19,5 @@ clean::
 	rm -fr hdfs-cp
 
 hdfs-cp:
-	gcc -Wall -O2 $(INCLUDE_PATH) $(LIB_PATH) hdfs-cp.c -o hdfs-cp -lhdfs -lpthread -ljvm
+	gcc -Wall -O2        $(INCLUDE_PATH) $(LIB_PATH) hdfs-cp.c -o hdfs-cp -lhdfs -lpthread -ljvm
 
