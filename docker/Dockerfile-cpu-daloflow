@@ -46,6 +46,7 @@ RUN apt-get update && apt-get install -y --allow-downgrades --allow-change-held-
         swig \
         openjdk-8-jdk \
         openjdk-8-jre-headless \
+        iputils-ping \
         net-tools \
         && \
     apt-get clean 

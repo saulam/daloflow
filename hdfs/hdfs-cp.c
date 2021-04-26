@@ -1,4 +1,5 @@
 
+
 /*
  *
  *  Copyright 2019-2021 Jose Rivadeneira Lopez-Bravo, Saul Alonso Monsalve, Felix Garcia Carballeira, Alejandro Calderon Mateos
@@ -48,6 +49,30 @@
  * Copy from HDFS
  */
 
+void mkdir_recursive ( const char *path )
+{
+     int          ret ;
+     char *subpath, *fullpath;
+
+     // duplicate string (malloc inside)
+     fullpath = strdup(path);
+
+     // get last directory
+     subpath = dirname(fullpath);
+     if (strlen(subpath) > 1) {
+         mkdir_recursive(subpath);
+     }
+
+     // mkdir last directory
+     ret = mkdir(path, 0700);
+     if (ret < 0) {
+         DEBUG_PRINT("ERROR: creating directory '%s'.\n", path) ;
+     }
+
+     // free duplicate string
+     free(fullpath);
+}
+
 int copy_from_to ( hdfsFS fs, char *file_name_org, char *file_name_dst, long buffer_size )
 {
      // local buffer for future threads
@@ -84,8 +109,8 @@ int copy_from_to ( hdfsFS fs, char *file_name_org, char *file_name_dst, long buf
          }
          if (num_readed_bytes == 0) {
              DEBUG_PRINT("WARNING: file smaller than %ld bytes.\n", buffer_size) ;
-	     buffer_size = buffer_size - read_remaining_bytes ;
-	     break ;
+             buffer_size = buffer_size - read_remaining_bytes ;
+             break ;
          }
 
          read_remaining_bytes -= num_readed_bytes ;
@@ -97,8 +122,10 @@ int copy_from_to ( hdfsFS fs, char *file_name_org, char *file_name_dst, long buf
      strcpy(basename_org, file_name_dst) ;
      dirname_org = dirname(basename_org) ;
      if (stat(dirname_org, &st) == -1) {
-         mkdir(dirname_org, 0700);
+         mkdir_recursive(dirname_org) ;
      }
+
+     DEBUG_PRINT(">> copy from '%s' to '%s' in '%s'...\n", file_name_org, file_name_dst, dirname_org) ; // DEBUG
 
      int write_fd = open(file_name_dst, O_WRONLY | O_CREAT, 0700) ;
      if (write_fd < 0) {
@@ -135,7 +162,7 @@ int copy_from_to ( hdfsFS fs, char *file_name_org, char *file_name_dst, long buf
  * Threads
  */
 
-#define NUM_THREADS  (8)
+#define NUM_THREADS  (16)
 pthread_t threads[NUM_THREADS] ;
 
 int sync_copied = 0 ;
@@ -182,7 +209,7 @@ void * th_copy_from_hdfs_to_local ( void *arg )
        // If local file then symlink, else copy from hdfs
        is_remote = strncmp(thargs.machine_name, blocks_information[0][0], strlen(thargs.machine_name)) ;
        if (0 == is_remote)
-       { 
+       {
            // TODO: fuse dir as param...
            sprintf(ln_name_org, "%s/../fuse/%s", thargs.destination_dir, file_name_org) ;
            ret = symlink(file_name_dst, ln_name_org) ;
@@ -297,3 +324,4 @@ int main ( int argc, char* argv[] )
     // The end
     return 0;
 }
+

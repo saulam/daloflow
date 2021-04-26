@@ -23,7 +23,7 @@ fi
 # Copy files into a local directory ($BASE_CACHE)
 #
 
-# Remove old "train*.tar.gz" files at /mnt/local-storage/daloflow/dataset/
+# Remove old "train*.tar.gz" files at $BASE_CACHE
 find $BASE_CACHE -name "train*.tar.gz" -exec rm  {} \;
 
 # Copy new files
