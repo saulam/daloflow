@@ -422,6 +422,8 @@ do
 	     mpirun|swarm-mpirun)
 		shift
                 daloflow_run $@
+		shift
+		shift
 	     ;;
 	     bash)
 		shift
