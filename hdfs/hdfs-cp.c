@@ -1,5 +1,4 @@
 
-
 /*
  *
  *  Copyright 2019-2021 Jose Rivadeneira Lopez-Bravo, Saul Alonso Monsalve, Felix Garcia Carballeira, Alejandro Calderon Mateos
@@ -33,6 +32,7 @@
 #include <pthread.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/sysinfo.h>
 #include "hdfs.h"
 
 #define BUFFER_SIZE   (4 * 1024 * 1024)
@@ -51,8 +51,20 @@
 
 void mkdir_recursive ( const char *path )
 {
-     int          ret ;
-     char *subpath, *fullpath;
+     int    ret ;
+     char  *subpath, *fullpath;
+     struct stat s;
+
+     // if directories exist then return
+     ret = stat(path, &s);
+     if (ret >= 0)
+     {
+         if (!S_ISDIR(s.st_mode)) {
+             DEBUG_PRINT("ERROR: path '%s' is not a directory.\n", path) ;
+         }
+
+         return ;
+     }
 
      // duplicate string (malloc inside)
      fullpath = strdup(path);
@@ -125,7 +137,7 @@ int copy_from_to ( hdfsFS fs, char *file_name_org, char *file_name_dst, long buf
          mkdir_recursive(dirname_org) ;
      }
 
-     DEBUG_PRINT(">> copy from '%s' to '%s' in '%s'...\n", file_name_org, file_name_dst, dirname_org) ; // DEBUG
+     DEBUG_PRINT("INFO: copy from '%s' to '%s' in '%s'...\n", file_name_org, file_name_dst, dirname_org) ; // DEBUG
 
      int write_fd = open(file_name_dst, O_WRONLY | O_CREAT, 0700) ;
      if (write_fd < 0) {
@@ -162,8 +174,8 @@ int copy_from_to ( hdfsFS fs, char *file_name_org, char *file_name_dst, long buf
  * Threads
  */
 
-#define NUM_THREADS  (16)
-pthread_t threads[NUM_THREADS] ;
+int NUM_THREADS = 1 ;
+pthread_t *threads ;
 
 int sync_copied = 0 ;
 pthread_cond_t sync_cond ;
@@ -180,7 +192,6 @@ struct th_args {
 void * th_copy_from_hdfs_to_local ( void *arg )
 {
        int             ret ;
-       char          * msg ;
        struct th_args  thargs ;
        char            file_name_dst[2*PATH_MAX] ;
        char            file_name_org[2*PATH_MAX] ;
@@ -221,12 +232,11 @@ void * th_copy_from_hdfs_to_local ( void *arg )
        }
 
        // Show message...
-       msg = (ret < 0) ? "Error found" : "Done" ;
        DEBUG_PRINT("'%s' from node '%s' to node '%s': %s\n",
                    thargs.file_name_org,
                    blocks_information[0][0],
                    thargs.machine_name,
-                   msg) ;
+                   (ret < 0) ? "Error found" : "Done") ;
 
        // The End
        pthread_exit((void *)(long)ret) ;
@@ -264,6 +274,10 @@ int main ( int argc, char* argv[] )
         printf("Usage: %s <hdfs/path> <file_list.txt> <cache/path>\n", argv[0]) ;
         exit(-1) ;
     }
+
+    // NUM_THREADS
+    NUM_THREADS = get_nprocs_conf() ;
+    threads     = malloc(NUM_THREADS * sizeof(pthread_t)) ;
 
     // Initialize th_args...
     bzero(&th_args, sizeof(struct th_args)) ;
@@ -320,8 +334,8 @@ int main ( int argc, char* argv[] )
 
     hdfsDisconnect(th_args.fs) ;
     fclose(list_fd) ;
+    free(threads) ;
 
     // The end
     return 0;
 }
-
