@@ -1,4 +1,3 @@
-#!/bin/bash
 #set -x
 
 # Load default configuration
@@ -21,7 +20,17 @@ export HADOOP_PORT=0
 FULL_LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$BASE_LIBHDFS/lib:$BASE_JAVA/jre/lib/amd64/server
 FULL_CLASSPATH=$CLASSPATH:$(hadoop classpath --glob)
 
+# Parameters
+PARAMETER_HDFS_DIR=$1
+PARAMETER_HDFS_LIST=$2
+PARAMETER_CACHE_DIR=$3
 
-# bind everything all together
-env CLASSPATH=$FULL_CLASSPATH LD_LIBRARY_PATH=$FULL_LD_LIBRARY_PATH $BASE_DIR/hdfs-cp $@
+# If necessary then remove the cache_directory first
+if [ "${REMOVE_CACHE_FIST,,}" == "true" ]; then
+     rm -fr $PARAMETER_CACHE_DIR
+fi
+
+# Run hdfs-cp
+echo env CLASSPATH=$FULL_CLASSPATH LD_LIBRARY_PATH=$FULL_LD_LIBRARY_PATH $BASE_DIR/hdfs-cp $PARAMETER_HDFS_DIR $PARAMETER_HDFS_LIST $PARAMETER_CACHE_DIR
+env CLASSPATH=$FULL_CLASSPATH LD_LIBRARY_PATH=$FULL_LD_LIBRARY_PATH $BASE_DIR/hdfs-cp $PARAMETER_HDFS_DIR $PARAMETER_HDFS_LIST $PARAMETER_CACHE_DIR
 

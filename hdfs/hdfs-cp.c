@@ -280,7 +280,7 @@ int main ( int argc, char* argv[] )
     }
 
     // NUM_THREADS
-    NUM_THREADS = 2 * get_nprocs_conf() ;
+    NUM_THREADS = 3 * get_nprocs_conf() ;
     threads     = malloc(NUM_THREADS * sizeof(pthread_t)) ;
 
     // Initialize th_args...

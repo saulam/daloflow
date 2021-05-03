@@ -109,7 +109,6 @@ if can_continue_with_cache:
 
     # copy from hdfs to local
     if can_continue_with_cache:
-       status = os.system("rm -fr " + cache_dir)
        status = os.system("hdfs/hdfs-cp.sh" + " " + hdfs_dir + " " + hdfs_list + " " + cache_dir)
        can_continue_with_cache = os.WIFEXITED(status) and (os.WEXITSTATUS(status) == 0)
 
@@ -226,4 +225,5 @@ mnist_model.fit(x=training_generator, steps_per_epoch=iters // hvd.size(), callb
 if hvd.rank() == 0:
     with open('output.txt', 'a') as fd:
         fd.write(str(height)+'x'+str(width)+' '+str(convs)+' '+str(hvd.size()) + ' '+str(32150.*cb.logs[0]/iters)+' s\n')
+
 
