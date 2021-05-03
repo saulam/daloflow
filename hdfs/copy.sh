@@ -20,12 +20,13 @@ fi
 
 
 #
-# Copy files into a local directory ($BASE_CACHE)
+# Copy files into a local directory ($BASE_CACHE + "container name")
 #
+BASE_CACHE_IN_CONTAINER=$BASE_CACHE"/"$(hostname)
 
-# Remove old "train*.tar.gz" files at $BASE_CACHE
-find $BASE_CACHE -name "train*.tar.gz" -exec rm  {} \;
+# Remove old "train*.tar.gz" files at $BASE_CACHE...
+rm -fr $BASE_CACHE_IN_CONTAINER
 
 # Copy new files
-$BASE_DIR/hdfs-cp.sh $BASE_HDFS $LIST_CACHE $BASE_CACHE
+$BASE_DIR/hdfs-cp.sh $BASE_HDFS $LIST_CACHE $BASE_CACHE_IN_CONTAINER
 

@@ -195,9 +195,9 @@ void * th_copy_from_hdfs_to_local ( void *arg )
        struct th_args  thargs ;
        char            file_name_dst[2*PATH_MAX] ;
        char            file_name_org[2*PATH_MAX] ;
-       char              ln_name_org[2*PATH_MAX] ;
+       //char              ln_name_org[2*PATH_MAX] ;
        char        *** blocks_information;
-       int             is_remote ;
+       //int             is_remote ;
 
        // Copy arguments
        pthread_mutex_lock(&sync_mutex) ;
@@ -218,10 +218,12 @@ void * th_copy_from_hdfs_to_local ( void *arg )
        }
 
        // If local file then symlink, else copy from hdfs
+       /*
+        * TODO: fuse dir as param... (to avoid '%s/../fuse/%s')
+        *
        is_remote = strncmp(thargs.machine_name, blocks_information[0][0], strlen(thargs.machine_name)) ;
        if (0 == is_remote)
        {
-           // TODO: fuse dir as param...
            sprintf(ln_name_org, "%s/../fuse/%s", thargs.destination_dir, file_name_org) ;
            ret = symlink(file_name_dst, ln_name_org) ;
            if (ret < 0) { perror("symlink: ") ; }
@@ -230,6 +232,8 @@ void * th_copy_from_hdfs_to_local ( void *arg )
        {
            ret = copy_from_to(thargs.fs, file_name_org, file_name_dst, BUFFER_SIZE) ;
        }
+       */
+       ret = copy_from_to(thargs.fs, file_name_org, file_name_dst, BUFFER_SIZE) ;
 
        // Show message...
        DEBUG_PRINT("'%s' from node '%s' to node '%s': %s\n",
@@ -276,7 +280,7 @@ int main ( int argc, char* argv[] )
     }
 
     // NUM_THREADS
-    NUM_THREADS = get_nprocs_conf() ;
+    NUM_THREADS = 2 * get_nprocs_conf() ;
     threads     = malloc(NUM_THREADS * sizeof(pthread_t)) ;
 
     // Initialize th_args...
@@ -339,3 +343,4 @@ int main ( int argc, char* argv[] )
     // The end
     return 0;
 }
+
