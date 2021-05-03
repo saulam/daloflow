@@ -103,7 +103,7 @@ if can_continue_with_cache:
        with open(hdfs_list, "w") as f:
            f.write('labels.p\n')
            for item in partition['train']:
-               f.write(join(item.split('/')[1:]) + '.tar.gz\n')
+               f.write(''.join(item.split('/')[1:]) + '.tar.gz\n')
            f.close()
 
     # copy from hdfs to local
