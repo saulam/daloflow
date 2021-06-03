@@ -267,17 +267,16 @@ struct th_args {
        char      file_name_org   [PATH_MAX] ;
        char      machine_name    [HOST_NAME_MAX + 1] ;
        char      destination_dir [PATH_MAX] ;
+       char      action          [PATH_MAX] ;
 } ;
 
-void * th_copy_from_hdfs_to_local ( void *arg )
+void * th_copy_from_to ( void *arg )
 {
        int             ret ;
        struct th_args  thargs ;
        char            file_name_dst[2*PATH_MAX] ;
        char            file_name_org[2*PATH_MAX] ;
-     //char              ln_name_org[2*PATH_MAX] ;
        char        *** blocks_information;
-       int             is_remote ;
 
        // Copy arguments
        pthread_mutex_lock(&sync_mutex) ;
@@ -297,16 +296,18 @@ void * th_copy_from_hdfs_to_local ( void *arg )
            pthread_exit((void *)0) ;
        }
 
-       // If local file then symlink, else copy from hdfs
-       is_remote = strncmp(thargs.machine_name, blocks_information[0][0], strlen(thargs.machine_name)) ;
-       if (0 != is_remote)
+       // do action with file...
+       ret = 1 ;
+       if (!strcmp(thargs.action, "hdfs2local"))
        {
-           ret = copy_from_hdfs_to_local(thargs.fs, file_name_org, file_name_dst) ;
+           //int is_remote = strncmp(thargs.machine_name, blocks_information[0][0], strlen(thargs.machine_name)) ;
+           //if (0 != is_remote) {
+                 ret = copy_from_hdfs_to_local(thargs.fs, file_name_org, file_name_dst) ;
+           //}
+
        }
-       else
-       {
-           // if local => copy too
-           ret = copy_from_hdfs_to_local(thargs.fs, file_name_org, file_name_dst) ;
+       if (!strcmp(thargs.action, "local2hdfs")) {
+           ret = copy_from_local_to_hdfs(thargs.fs, file_name_org, file_name_dst) ;
        }
 
        // Show message...
@@ -352,10 +353,6 @@ int main ( int argc, char* argv[] )
         printf("Usage: %s hdfs2local <hdfs/path> <file_list.txt> <cache/path>\n", argv[0]) ;
         exit(-1) ;
     }
-    if (strcmp(argv[1],"hdfs2local")) {
-        printf("Usage: %s hdfs2local <hdfs/path> <file_list.txt> <cache/path>\n", argv[0]) ;
-        exit(-1) ;
-    }
 
     // NUM_THREADS
     NUM_THREADS = 3 * get_nprocs_conf() ;
@@ -363,6 +360,7 @@ int main ( int argc, char* argv[] )
 
     // Initialize th_args...
     bzero(&th_args, sizeof(struct th_args)) ;
+    strcpy(th_args.action,          argv[1]) ;
     strcpy(th_args.hdfs_path_org,   argv[2]) ;
     strcpy(th_args.destination_dir, argv[4]) ;
     gethostname(th_args.machine_name, HOST_NAME_MAX + 1) ;
@@ -393,7 +391,7 @@ int main ( int argc, char* argv[] )
             }
 
             // Create thread...
-            ret2 = pthread_create(&(threads[num_threads]), NULL, th_copy_from_hdfs_to_local, (void *)&(th_args)) ;
+            ret2 = pthread_create(&(threads[num_threads]), NULL, th_copy_from_to, (void *)&(th_args)) ;
             if (ret2 != 0) {
                 perror("pthread_create: ") ;
                 exit(-1) ;
