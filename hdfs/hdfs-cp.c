@@ -32,7 +32,7 @@
 #include <sys/sysinfo.h>
 #include "hdfs.h"
 
-#define BUFFER_SIZE   (4 * 1024 * 1024)
+#define BUFFER_SIZE   (     128 * 1024)
 #define BLOCKSIZE    (64 * 1024 * 1024)
 
 #ifdef DEBUG
@@ -43,7 +43,7 @@
 
 
 /*
- * Copy from HDFS
+ * Copy from/to HDFS
  */
 
 void mkdir_recursive ( const char *path )
@@ -270,13 +270,16 @@ struct th_args {
        char      action          [PATH_MAX] ;
 } ;
 
-void * th_copy_from_to ( void *arg )
+void * th_do_action ( void *arg )
 {
        int             ret ;
        struct th_args  thargs ;
        char            file_name_dst[2*PATH_MAX] ;
        char            file_name_org[2*PATH_MAX] ;
        char        *** blocks_information;
+
+       // Default return value
+       ret = 0 ;
 
        // Copy arguments
        pthread_mutex_lock(&sync_mutex) ;
@@ -293,11 +296,10 @@ void * th_copy_from_to ( void *arg )
        blocks_information = hdfsGetHosts(thargs.fs, file_name_org, 0, BLOCKSIZE) ;
        if (NULL == blocks_information) {
            DEBUG_PRINT("ERROR: hdfsGetHosts for '%s'.\n", thargs.file_name_org) ;
-           pthread_exit((void *)0) ;
+           pthread_exit((void *)(long)ret) ;
        }
 
-       // do action with file...
-       ret = 1 ;
+       // Do action with file...
        if (!strcmp(thargs.action, "hdfs2local"))
        {
            //int is_remote = strncmp(thargs.machine_name, blocks_information[0][0], strlen(thargs.machine_name)) ;
@@ -305,19 +307,42 @@ void * th_copy_from_to ( void *arg )
                  ret = copy_from_hdfs_to_local(thargs.fs, file_name_org, file_name_dst) ;
            //}
 
+           // Show message...
+           DEBUG_PRINT("'%s' from node '%s' to node '%s': %s\n",
+                       thargs.file_name_org,
+                       blocks_information[0][0],
+                       thargs.machine_name,
+                       (ret < 0) ? "Error found" : "Done") ;
+
        }
-       if (!strcmp(thargs.action, "local2hdfs")) {
+
+       if (!strcmp(thargs.action, "local2hdfs"))
+       {
            ret = copy_from_local_to_hdfs(thargs.fs, file_name_org, file_name_dst) ;
        }
 
-       // Show message...
-       DEBUG_PRINT("'%s' from node '%s' to node '%s': %s\n",
-                   thargs.file_name_org,
-                   blocks_information[0][0],
-                   thargs.machine_name,
-                   (ret < 0) ? "Error found" : "Done") ;
+       if (!strcmp(thargs.action, "stats4hdfs"))
+       {
+	   int i = 0 ;
+           int is_remote = strncmp(thargs.machine_name, blocks_information[0][0], strlen(thargs.machine_name)) ;
+
+	   printf(" {") ;
+	   printf("   name:'%s', ",      file_name_org) ;
+	   printf("   is_remote:%d, ", is_remote) ;
+	   printf("   hostnames:'") ;
+	   while (blocks_information[0][i] != NULL)
+	   {
+	          printf("%s", blocks_information[0][i]) ;
+		  i++ ;
+	          if (blocks_information[0][i] != NULL) {
+	              printf("+") ;
+		  }
+	   }
+	   printf("' },\n") ;
+       }
 
        // The End
+       hdfsFreeHosts(blocks_information);
        pthread_exit((void *)(long)ret) ;
 }
 
@@ -338,6 +363,22 @@ char * fgets2 ( FILE *fd, char *str, int len )
        return str ;
 }
 
+void usage ( char *app_name )
+{
+       printf("\n") ;
+       printf("  HDFS Copy\n") ;
+       printf(" -----------\n") ;
+       printf("\n") ;
+       printf("  Usage:\n") ;
+       printf("\n") ;
+       printf("  > %s hdfs2local <hdfs/path> <file_list.txt> <cache/path>\n", app_name) ;
+       printf("    Copy from a HDFS path to a local cache path a list of files (within file_list.txt).\n") ;
+       printf("\n") ;
+       printf("  > %s stats4hdfs <hdfs/path> <file_list.txt> <cache/path>\n", app_name) ;
+       printf("    List HDFS metadata from the list of files within file_list.txt.\n") ;
+       printf("\n") ;
+       printf("\n") ;
+}
 
 // Main
 int main ( int argc, char* argv[] )
@@ -350,7 +391,7 @@ int main ( int argc, char* argv[] )
 
     // Check arguments
     if (argc != 5) {
-        printf("Usage: %s hdfs2local <hdfs/path> <file_list.txt> <cache/path>\n", argv[0]) ;
+        usage(argv[0]) ;
         exit(-1) ;
     }
 
@@ -391,7 +432,7 @@ int main ( int argc, char* argv[] )
             }
 
             // Create thread...
-            ret2 = pthread_create(&(threads[num_threads]), NULL, th_copy_from_to, (void *)&(th_args)) ;
+            ret2 = pthread_create(&(threads[num_threads]), NULL, th_do_action, (void *)&(th_args)) ;
             if (ret2 != 0) {
                 perror("pthread_create: ") ;
                 exit(-1) ;
