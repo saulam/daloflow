@@ -82,6 +82,48 @@ void mkdir_recursive ( const char *path )
      free(fullpath);
 }
 
+int create_local_file ( char *file_name_dst )
+{
+     /* mkdir directory structure */
+     struct stat st = {0} ;
+     char        basename_org[PATH_MAX] ;
+     char       *dirname_org ;
+
+     strcpy(basename_org, file_name_dst) ;
+     dirname_org = dirname(basename_org) ;
+     if (stat(dirname_org, &st) == -1) {
+         mkdir_recursive(dirname_org) ;
+     }
+
+     /* open local file */
+     int write_fd = open(file_name_dst, O_WRONLY | O_CREAT, 0700) ;
+     if (write_fd < 0) {
+         DEBUG_PRINT("ERROR: open fails to create '%s' file.\n", file_name_dst) ;
+     }
+
+     return write_fd ;
+}
+
+hdfsFile create_hdfs_file ( hdfsFS fs, char *file_name_dst )
+{
+     hdfsFile write_fd ;
+     char   basename_org[PATH_MAX] ;
+     char  *dirname_org ;
+
+     // mkdir directory structure
+     strcpy(basename_org, file_name_dst) ;
+     dirname_org = dirname(basename_org) ;
+     hdfsCreateDirectory(fs, dirname_org);
+
+     /* open hdfs file */
+     write_fd = hdfsOpenFile(fs, file_name_dst, O_WRONLY|O_CREAT, 0, 0, 0) ;
+     if (!write_fd) {
+         DEBUG_PRINT("ERROR: hdfsOpenFile fails to create '%s'.\n", file_name_dst) ;
+     }
+
+     return write_fd ;
+}
+
 int write_buffer ( hdfsFS fs, hdfsFile write_fd1, int write_fd2, void *buffer, int buffer_size, int num_readed_bytes )
 {
      ssize_t write_num_bytes       = -1 ;
@@ -110,7 +152,7 @@ int write_buffer ( hdfsFS fs, hdfsFile write_fd1, int write_fd2, void *buffer, i
          write_remaining_bytes -= write_num_bytes ;
      }
 
-     return 0 ;
+     return num_readed_bytes ;
 }
 
 int read_buffer ( hdfsFS fs, hdfsFile read_fd1, int read_fd2, void *buffer, int buffer_size )
@@ -141,28 +183,23 @@ int read_buffer ( hdfsFS fs, hdfsFile read_fd1, int read_fd2, void *buffer, int 
          read_remaining_bytes -= read_num_bytes ;
      }
 
-     return 0 ;
+     return buffer_size ;
 }
 
 
 int copy_from_hdfs_to_local ( hdfsFS fs, char *file_name_org, char *file_name_dst )
 {
+     int ret = -1 ;
+     int write_fd ;
+     hdfsFile read_file ;
+     tSize num_readed_bytes = 0 ;
+     unsigned char *buffer = NULL ;
+
      // allocate intermediate buffer
-     unsigned char *buffer = malloc(BUFFER_SIZE) ;
+     buffer = malloc(BUFFER_SIZE) ;
      if (NULL == buffer) {
          DEBUG_PRINT("ERROR: malloc for '%ld'.\n", BUFFER_SIZE) ;
          return -1 ;
-     }
-
-     // mkdir directory structure
-     struct stat st = {0} ;
-     char        basename_org[PATH_MAX] ;
-     char       *dirname_org ;
-
-     strcpy(basename_org, file_name_dst) ;
-     dirname_org = dirname(basename_org) ;
-     if (stat(dirname_org, &st) == -1) {
-         mkdir_recursive(dirname_org) ;
      }
 
      // DEBUG
@@ -170,7 +207,7 @@ int copy_from_hdfs_to_local ( hdfsFS fs, char *file_name_org, char *file_name_ds
                  file_name_org, file_name_dst, dirname_org) ;
 
      /* Data from HDFS */
-     hdfsFile read_file = hdfsOpenFile(fs, file_name_org, O_RDONLY, 0, 0, 0) ;
+     read_file = hdfsOpenFile(fs, file_name_org, O_RDONLY, 0, 0, 0) ;
      if (!read_file) {
          free(buffer) ;
          DEBUG_PRINT("ERROR: hdfsOpenFile on '%s' for reading.\n", file_name_org) ;
@@ -178,27 +215,19 @@ int copy_from_hdfs_to_local ( hdfsFS fs, char *file_name_org, char *file_name_ds
      }
 
      /* Data to local file */
-     int write_fd = open(file_name_dst, O_WRONLY | O_CREAT, 0700) ;
+     write_fd = create_local_file(file_name_dst) ;
      if (write_fd < 0) {
          hdfsCloseFile(fs, read_file) ;
          free(buffer) ;
-         DEBUG_PRINT("ERROR: open fails to create '%s' file.\n", file_name_dst) ;
          return -1 ;
      }
 
      /* Copy from HDFS to local */
-     tSize num_readed_bytes = 0 ;
-     int ret = -1 ;
-
      do
      {
          num_readed_bytes = read_buffer(fs, read_file, -1, (void *)buffer, BUFFER_SIZE) ;
-         if (num_readed_bytes == -1) {
-             break ;
-         }
-         ret = write_buffer(NULL, NULL, write_fd, (void *)buffer, BUFFER_SIZE, num_readed_bytes) ;
-         if (ret == -1) {
-             break ;
+         if (num_readed_bytes != -1) {
+             ret = write_buffer(NULL, NULL, write_fd, (void *)buffer, BUFFER_SIZE, num_readed_bytes) ;
          }
      }
      while ( (ret != -1) && (num_readed_bytes > 0) ) ;
@@ -207,40 +236,38 @@ int copy_from_hdfs_to_local ( hdfsFS fs, char *file_name_org, char *file_name_ds
      hdfsCloseFile(fs, read_file) ;
      close(write_fd) ;
      free(buffer) ;
+
      return ret ;
 }
 
 int copy_from_local_to_hdfs ( hdfsFS fs, char *file_name_org, char *file_name_dst )
 {
+     int ret = -1 ;
+     hdfsFile write_fd ;
+     int read_file ;
+     tSize num_readed_bytes = 0 ;
+     unsigned char *buffer = NULL ;
+
      // allocate intermediate buffer
-     unsigned char *buffer = malloc(BUFFER_SIZE) ;
+     buffer = malloc(BUFFER_SIZE) ;
      if (NULL == buffer) {
          DEBUG_PRINT("ERROR: malloc for '%ld'.\n", BUFFER_SIZE) ;
          return -1 ;
      }
 
-     // mkdir directory structure
-     char   basename_org[PATH_MAX] ;
-     char  *dirname_org ;
-
-     strcpy(basename_org, file_name_dst) ;
-     dirname_org = dirname(basename_org) ;
-     hdfsCreateDirectory(fs, dirname_org);
-
      // DEBUG
      DEBUG_PRINT("INFO: copy from '%s' to '%s' in '%s'...\n",
                  file_name_org, file_name_dst, dirname_org) ;
 
-     /* Data from HDFS */
-     hdfsFile write_fd = hdfsOpenFile(fs, file_name_org, O_WRONLY|O_CREAT, 0, 0, 0) ;
+     /* Data to HDFS */
+     write_fd = create_hdfs_file(fs, file_name_org) ;
      if (!write_fd) {
          free(buffer) ;
-         DEBUG_PRINT("ERROR: hdfsOpenFile fails to create '%s'.\n", file_name_org) ;
          return -1 ;
      }
 
-     /* Data to local file */
-     int read_file = open(file_name_dst, O_RDONLY, 0700) ;
+     /* Data from local file */
+     read_file = open(file_name_dst, O_RDONLY, 0700) ;
      if (read_file < 0) {
          hdfsCloseFile(fs, write_fd) ;
          free(buffer) ;
@@ -248,19 +275,12 @@ int copy_from_local_to_hdfs ( hdfsFS fs, char *file_name_org, char *file_name_ds
          return -1 ;
      }
 
-     /* Copy from HDFS to local */
-     tSize num_readed_bytes = 0 ;
-     int ret = -1 ;
-
+     /* Copy from local to HDFS */
      do
      {
          num_readed_bytes = read_buffer(NULL, NULL, read_file, (void *)buffer, BUFFER_SIZE) ;
-         if (num_readed_bytes == -1) {
-             break ;
-         }
-         ret = write_buffer(fs, write_fd, -1, (void *)buffer, BUFFER_SIZE, num_readed_bytes) ;
-         if (ret == -1) {
-             break ;
+         if (num_readed_bytes != -1) {
+             ret = write_buffer(fs, write_fd, -1, (void *)buffer, BUFFER_SIZE, num_readed_bytes) ;
          }
      }
      while ( (ret != -1) && (num_readed_bytes > 0) ) ;
@@ -270,6 +290,7 @@ int copy_from_local_to_hdfs ( hdfsFS fs, char *file_name_org, char *file_name_ds
      hdfsCloseFile(fs, write_fd) ;
      close(read_file) ;
      free(buffer) ;
+
      return ret ;
 }
 
