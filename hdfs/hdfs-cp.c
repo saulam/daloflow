@@ -299,15 +299,9 @@ int hdfs_stats ( char *file_name_org, char *machine_name, char ***blocks_informa
      char hostname_list[1024] ;
 
      // hostnames
-     int i = 0 ;
      strcpy(hostname_list, "") ;
-     while (blocks_information[0][i] != NULL)
-     {
-	  sprintf(hostname_list, "%s", blocks_information[0][i]) ;
-	  i++ ;
-	  if (blocks_information[0][i] != NULL) {
-	      sprintf(hostname_list, "+") ;
-	  }
+     for (int i=0; blocks_information[0][i] != NULL; i++) {
+	  sprintf(hostname_list, "%s+%s", hostname_list, blocks_information[0][i]) ;
      }
 
      // is_remote
