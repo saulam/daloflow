@@ -82,6 +82,69 @@ void mkdir_recursive ( const char *path )
      free(fullpath);
 }
 
+int write_buffer ( hdfsFS fs, hdfsFile write_fd1, int write_fd2, void *buffer, int buffer_size, int num_readed_bytes )
+{
+     ssize_t write_num_bytes       = -1 ;
+     ssize_t write_remaining_bytes = num_readed_bytes ;
+
+     while (write_remaining_bytes > 0)
+     {
+	 // Write into hdfs (fs+write_fd1) or local file (write_fd2)...
+	 if (fs != NULL) {
+             write_num_bytes = hdfsWrite(fs, write_fd1,
+				         buffer + (buffer_size - write_remaining_bytes),
+				         write_remaining_bytes) ;
+	 }
+	 if (write_fd2 != -1) {
+             write_num_bytes = write(write_fd2,
+    	    		             buffer + (buffer_size - write_remaining_bytes),
+			             write_remaining_bytes) ;
+	 }
+
+	 // check errors
+         if (write_num_bytes == -1) {
+	     DEBUG_PRINT("ERROR: write fails to write data.\n") ;
+	     return -1 ;
+         }
+
+         write_remaining_bytes -= write_num_bytes ;
+     }
+
+     return 0 ;
+}
+
+int read_buffer ( hdfsFS fs, hdfsFile read_fd1, int read_fd2, void *buffer, int buffer_size )
+{
+     ssize_t read_num_bytes       = -1 ;
+     ssize_t read_remaining_bytes = buffer_size ;
+
+     while (read_remaining_bytes > 0)
+     {
+	 // Read from hdfs (fs+read_fd1) or local file (read_fd2)...
+	 if (fs != NULL) {
+             read_num_bytes = hdfsRead(fs, read_fd1,
+				       buffer + (buffer_size - read_remaining_bytes),
+				       read_remaining_bytes) ;
+	 }
+	 if (read_fd2 != -1) {
+             read_num_bytes = read(read_fd2,
+    	    		           buffer + (buffer_size - read_remaining_bytes),
+			           read_remaining_bytes) ;
+	 }
+
+	 // check errors
+         if (read_num_bytes == -1) {
+	     DEBUG_PRINT("ERROR: read fails to read data.\n") ;
+	     return -1 ;
+         }
+
+         read_remaining_bytes -= read_num_bytes ;
+     }
+
+     return 0 ;
+}
+
+
 int copy_from_hdfs_to_local ( hdfsFS fs, char *file_name_org, char *file_name_dst )
 {
      // allocate intermediate buffer
@@ -124,46 +187,27 @@ int copy_from_hdfs_to_local ( hdfsFS fs, char *file_name_org, char *file_name_ds
      }
 
      /* Copy from HDFS to local */
-     tSize   num_readed_bytes = 0 ;
-     ssize_t write_num_bytes  = 0 ;
-     ssize_t write_remaining_bytes = 0 ;
+     tSize num_readed_bytes = 0 ;
+     int ret = -1 ;
 
      do
      {
-         num_readed_bytes = hdfsRead(fs, read_file, (void *)buffer, BUFFER_SIZE) ;
+         num_readed_bytes = read_buffer(fs, read_file, -1, (void *)buffer, BUFFER_SIZE) ;
          if (num_readed_bytes == -1) {
-             DEBUG_PRINT("ERROR: hdfsRead fails to read data.\n") ;
-             goto cp_hdfs_local_error;
+             break ;
          }
-
-         write_remaining_bytes = num_readed_bytes ;
-         while (write_remaining_bytes > 0)
-         {
-             write_num_bytes = write(write_fd,
-                                     (void*)buffer + (BUFFER_SIZE - write_remaining_bytes),
-                                     write_remaining_bytes) ;
-             if (write_num_bytes == -1) {
-                 DEBUG_PRINT("ERROR: write fails to write data.\n") ;
-                 goto cp_hdfs_local_error;
-             }
-
-             write_remaining_bytes -= write_num_bytes ;
+         ret = write_buffer(NULL, NULL, write_fd, (void *)buffer, BUFFER_SIZE, num_readed_bytes) ;
+         if (ret == -1) {
+             break ;
          }
      }
-     while (num_readed_bytes > 0) ;
+     while ( (ret != -1) && (num_readed_bytes > 0) ) ;
 
      // Free resources (ok)
      hdfsCloseFile(fs, read_file) ;
      close(write_fd) ;
      free(buffer) ;
-     return 0 ;
-
-     // Free resources (ko)
-cp_hdfs_local_error:
-     close(write_fd) ;
-     hdfsCloseFile(fs, read_file) ;
-     free(buffer) ;
-     return -1 ;
+     return ret ;
 }
 
 int copy_from_local_to_hdfs ( hdfsFS fs, char *file_name_org, char *file_name_dst )
@@ -191,7 +235,7 @@ int copy_from_local_to_hdfs ( hdfsFS fs, char *file_name_org, char *file_name_ds
      hdfsFile write_fd = hdfsOpenFile(fs, file_name_org, O_WRONLY|O_CREAT, 0, 0, 0) ;
      if (!write_fd) {
          free(buffer) ;
-         DEBUG_PRINT("ERROR: hdfsOpenFile on '%s' for reading.\n", file_name_org) ;
+         DEBUG_PRINT("ERROR: hdfsOpenFile fails to create '%s'.\n", file_name_org) ;
          return -1 ;
      }
 
@@ -200,53 +244,58 @@ int copy_from_local_to_hdfs ( hdfsFS fs, char *file_name_org, char *file_name_ds
      if (read_file < 0) {
          hdfsCloseFile(fs, write_fd) ;
          free(buffer) ;
-         DEBUG_PRINT("ERROR: open fails to create '%s' file.\n", file_name_dst) ;
+         DEBUG_PRINT("ERROR: open fails for reading from '%s' file.\n", file_name_dst) ;
          return -1 ;
      }
 
      /* Copy from HDFS to local */
-     tSize   num_readed_bytes = 0 ;
-     ssize_t write_num_bytes  = 0 ;
-     ssize_t write_remaining_bytes = 0 ;
+     tSize num_readed_bytes = 0 ;
+     int ret = -1 ;
 
      do
      {
-         num_readed_bytes = read(read_file, (void *)buffer, BUFFER_SIZE) ;
+         num_readed_bytes = read_buffer(NULL, NULL, read_file, (void *)buffer, BUFFER_SIZE) ;
          if (num_readed_bytes == -1) {
-             DEBUG_PRINT("ERROR: hdfsRead fails to read data.\n") ;
-             goto cp_local_hdfs_error;
+             break ;
          }
-
-         write_remaining_bytes = num_readed_bytes ;
-         while (write_remaining_bytes > 0)
-         {
-             write_num_bytes = hdfsWrite(fs, write_fd,
-                                         (void *)buffer + (BUFFER_SIZE - write_remaining_bytes),
-					 write_remaining_bytes) ;
-             if (write_num_bytes == -1) {
-                 DEBUG_PRINT("ERROR: write fails to write data.\n") ;
-                 goto cp_local_hdfs_error;
-             }
-
-             write_remaining_bytes -= write_num_bytes ;
+         ret = write_buffer(fs, write_fd, -1, (void *)buffer, BUFFER_SIZE, num_readed_bytes) ;
+         if (ret == -1) {
+             break ;
          }
      }
-     while (num_readed_bytes > 0) ;
+     while ( (ret != -1) && (num_readed_bytes > 0) ) ;
 
      // Free resources (ok)
      hdfsFlush(fs, write_fd) ;
      hdfsCloseFile(fs, write_fd) ;
      close(read_file) ;
      free(buffer) ;
-     return 0 ;
+     return ret ;
+}
 
-     // Free resources (ko)
-cp_local_hdfs_error:
-     hdfsFlush(fs, write_fd) ;
-     hdfsCloseFile(fs, write_fd) ;
-     close(read_file) ;
-     free(buffer) ;
-     return -1 ;
+int hdfs_stats ( char *file_name_org, char *machine_name, char ***blocks_information )
+{
+     char hostname_list[1024] ;
+
+     // hostnames
+     int i = 0 ;
+     strcpy(hostname_list, "") ;
+     while (blocks_information[0][i] != NULL)
+     {
+	  sprintf(hostname_list, "%s", blocks_information[0][i]) ;
+	  i++ ;
+	  if (blocks_information[0][i] != NULL) {
+	      sprintf(hostname_list, "+") ;
+	  }
+     }
+
+     // is_remote
+     int is_remote = (strncmp(machine_name, blocks_information[0][0], strlen(machine_name)) != 0) ;
+
+     // print metadata for this file
+     printf("{ name:'%s', is_remote:%d, hostnames:'%s' },\n", file_name_org, is_remote, hostname_list) ;
+
+     return 0 ;
 }
 
 
@@ -315,30 +364,13 @@ void * th_do_action ( void *arg )
                        (ret < 0) ? "Error found" : "Done") ;
 
        }
-
        if (!strcmp(thargs.action, "local2hdfs"))
        {
            ret = copy_from_local_to_hdfs(thargs.fs, file_name_org, file_name_dst) ;
        }
-
        if (!strcmp(thargs.action, "stats4hdfs"))
        {
-	   int i = 0 ;
-           int is_remote = strncmp(thargs.machine_name, blocks_information[0][0], strlen(thargs.machine_name)) ;
-
-	   printf(" {") ;
-	   printf("   name:'%s', ",      file_name_org) ;
-	   printf("   is_remote:%d, ", is_remote) ;
-	   printf("   hostnames:'") ;
-	   while (blocks_information[0][i] != NULL)
-	   {
-	          printf("%s", blocks_information[0][i]) ;
-		  i++ ;
-	          if (blocks_information[0][i] != NULL) {
-	              printf("+") ;
-		  }
-	   }
-	   printf("' },\n") ;
+           ret = hdfs_stats(file_name_org, thargs.machine_name, blocks_information) ;
        }
 
        // The End
@@ -351,7 +383,7 @@ void * th_do_action ( void *arg )
  * Read string from file
  */
 
-char * fgets2 ( FILE *fd, char *str, int len )
+char * main_fgets2 ( FILE *fd, char *str, int len )
 {
        bzero(str, len) ;
        char *ret1 = fgets(str, len-1, fd) ;
@@ -363,7 +395,7 @@ char * fgets2 ( FILE *fd, char *str, int len )
        return str ;
 }
 
-void usage ( char *app_name )
+void main_usage ( char *app_name )
 {
        printf("\n") ;
        printf("  HDFS Copy\n") ;
@@ -391,7 +423,7 @@ int main ( int argc, char* argv[] )
 
     // Check arguments
     if (argc != 5) {
-        usage(argv[0]) ;
+        main_usage(argv[0]) ;
         exit(-1) ;
     }
 
@@ -426,7 +458,7 @@ int main ( int argc, char* argv[] )
        for (num_threads=0; num_threads<NUM_THREADS; num_threads++)
        {
             // Get file name from listing
-            ret1 = fgets2(list_fd, th_args.file_name_org, sizeof(th_args.file_name_org)) ;
+            ret1 = main_fgets2(list_fd, th_args.file_name_org, sizeof(th_args.file_name_org)) ;
             if (NULL == ret1) {
                 break ; // end for loop...
             }
