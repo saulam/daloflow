@@ -85,10 +85,9 @@ void mkdir_recursive ( const char *path )
 int copy_from_hdfs_to_local ( hdfsFS fs, char *file_name_org, char *file_name_dst )
 {
      // allocate intermediate buffer
-     long      buffer_size = 1*1024*1024 ;
-     unsigned char *buffer = malloc(buffer_size) ;
+     unsigned char *buffer = malloc(BUFFER_SIZE) ;
      if (NULL == buffer) {
-         DEBUG_PRINT("ERROR: malloc for '%ld'.\n", buffer_size) ;
+         DEBUG_PRINT("ERROR: malloc for '%ld'.\n", BUFFER_SIZE) ;
          return -1 ;
      }
 
@@ -131,27 +130,21 @@ int copy_from_hdfs_to_local ( hdfsFS fs, char *file_name_org, char *file_name_ds
 
      do
      {
-         num_readed_bytes = hdfsRead(fs, read_file, (void *)buffer, buffer_size) ;
+         num_readed_bytes = hdfsRead(fs, read_file, (void *)buffer, BUFFER_SIZE) ;
          if (num_readed_bytes == -1) {
-             free(buffer) ;
-             close(write_fd) ;
-             hdfsCloseFile(fs, read_file) ;
              DEBUG_PRINT("ERROR: hdfsRead fails to read data.\n") ;
-             return -1 ;
+             goto cp_hdfs_local_error;
          }
 
          write_remaining_bytes = num_readed_bytes ;
          while (write_remaining_bytes > 0)
          {
              write_num_bytes = write(write_fd,
-                                     (void*)buffer + (buffer_size - write_remaining_bytes),
+                                     (void*)buffer + (BUFFER_SIZE - write_remaining_bytes),
                                      write_remaining_bytes) ;
              if (write_num_bytes == -1) {
-                 free(buffer) ;
-                 close(write_fd) ;
-                 hdfsCloseFile(fs, read_file) ;
                  DEBUG_PRINT("ERROR: write fails to write data.\n") ;
-                 return -1 ;
+                 goto cp_hdfs_local_error;
              }
 
              write_remaining_bytes -= write_num_bytes ;
@@ -159,12 +152,101 @@ int copy_from_hdfs_to_local ( hdfsFS fs, char *file_name_org, char *file_name_ds
      }
      while (num_readed_bytes > 0) ;
 
-     // Free resources
+     // Free resources (ok)
      hdfsCloseFile(fs, read_file) ;
      close(write_fd) ;
      free(buffer) ;
-
      return 0 ;
+
+     // Free resources (ko)
+cp_hdfs_local_error:
+     close(write_fd) ;
+     hdfsCloseFile(fs, read_file) ;
+     free(buffer) ;
+     return -1 ;
+}
+
+int copy_from_local_to_hdfs ( hdfsFS fs, char *file_name_org, char *file_name_dst )
+{
+     // allocate intermediate buffer
+     unsigned char *buffer = malloc(BUFFER_SIZE) ;
+     if (NULL == buffer) {
+         DEBUG_PRINT("ERROR: malloc for '%ld'.\n", BUFFER_SIZE) ;
+         return -1 ;
+     }
+
+     // mkdir directory structure
+     char   basename_org[PATH_MAX] ;
+     char  *dirname_org ;
+
+     strcpy(basename_org, file_name_dst) ;
+     dirname_org = dirname(basename_org) ;
+     hdfsCreateDirectory(fs, dirname_org);
+
+     // DEBUG
+     DEBUG_PRINT("INFO: copy from '%s' to '%s' in '%s'...\n",
+                 file_name_org, file_name_dst, dirname_org) ;
+
+     /* Data from HDFS */
+     hdfsFile write_fd = hdfsOpenFile(fs, file_name_org, O_WRONLY|O_CREAT, 0, 0, 0) ;
+     if (!write_fd) {
+         free(buffer) ;
+         DEBUG_PRINT("ERROR: hdfsOpenFile on '%s' for reading.\n", file_name_org) ;
+         return -1 ;
+     }
+
+     /* Data to local file */
+     int read_file = open(file_name_dst, O_RDONLY, 0700) ;
+     if (read_file < 0) {
+         hdfsCloseFile(fs, write_fd) ;
+         free(buffer) ;
+         DEBUG_PRINT("ERROR: open fails to create '%s' file.\n", file_name_dst) ;
+         return -1 ;
+     }
+
+     /* Copy from HDFS to local */
+     tSize   num_readed_bytes = 0 ;
+     ssize_t write_num_bytes  = 0 ;
+     ssize_t write_remaining_bytes = 0 ;
+
+     do
+     {
+         num_readed_bytes = read(read_file, (void *)buffer, BUFFER_SIZE) ;
+         if (num_readed_bytes == -1) {
+             DEBUG_PRINT("ERROR: hdfsRead fails to read data.\n") ;
+             goto cp_local_hdfs_error;
+         }
+
+         write_remaining_bytes = num_readed_bytes ;
+         while (write_remaining_bytes > 0)
+         {
+             write_num_bytes = hdfsWrite(fs, write_fd,
+                                         (void *)buffer + (BUFFER_SIZE - write_remaining_bytes),
+					 write_remaining_bytes) ;
+             if (write_num_bytes == -1) {
+                 DEBUG_PRINT("ERROR: write fails to write data.\n") ;
+                 goto cp_local_hdfs_error;
+             }
+
+             write_remaining_bytes -= write_num_bytes ;
+         }
+     }
+     while (num_readed_bytes > 0) ;
+
+     // Free resources (ok)
+     hdfsFlush(fs, write_fd) ;
+     hdfsCloseFile(fs, write_fd) ;
+     close(read_file) ;
+     free(buffer) ;
+     return 0 ;
+
+     // Free resources (ko)
+cp_local_hdfs_error:
+     hdfsFlush(fs, write_fd) ;
+     hdfsCloseFile(fs, write_fd) ;
+     close(read_file) ;
+     free(buffer) ;
+     return -1 ;
 }
 
 
