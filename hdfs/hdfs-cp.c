@@ -170,19 +170,16 @@ int write_buffer ( hdfsFS fs, hdfsFile write_fd1, int write_fd2, void *buffer, i
 {
      ssize_t write_num_bytes       = -1 ;
      ssize_t write_remaining_bytes = num_readed_bytes ;
+     void   *write_buffer          = buffer ;
 
      while (write_remaining_bytes > 0)
      {
 	 /* Write into hdfs (fs+write_fd1) or local file (write_fd2)... */
-	 if (fs != NULL) {
-             write_num_bytes = hdfsWrite(fs, write_fd1,
-				         buffer + (buffer_size - write_remaining_bytes),
-				         write_remaining_bytes) ;
+	 if ((fs != NULL) && (write_fd1 != NULL)) {
+             write_num_bytes = hdfsWrite(fs, write_fd1, write_buffer, write_remaining_bytes) ;
 	 }
 	 if (write_fd2 != -1) {
-             write_num_bytes = write(write_fd2,
-    	    		             buffer + (buffer_size - write_remaining_bytes),
-			             write_remaining_bytes) ;
+             write_num_bytes = write(write_fd2, write_buffer, write_remaining_bytes) ;
 	 }
 
 	 /* Check errors */
@@ -192,6 +189,7 @@ int write_buffer ( hdfsFS fs, hdfsFile write_fd1, int write_fd2, void *buffer, i
          }
 
          write_remaining_bytes -= write_num_bytes ;
+         write_buffer          += write_num_bytes ;
      }
 
      return num_readed_bytes ;
@@ -201,19 +199,16 @@ int read_buffer ( hdfsFS fs, hdfsFile read_fd1, int read_fd2, void *buffer, int 
 {
      ssize_t read_num_bytes       = -1 ;
      ssize_t read_remaining_bytes = buffer_size ;
+     void   *read_buffer          = buffer ;
 
      while (read_remaining_bytes > 0)
      {
 	 /* Read from hdfs (fs+read_fd1) or local file (read_fd2)... */
-	 if (fs != NULL) {
-             read_num_bytes = hdfsRead(fs, read_fd1,
-				       buffer + (buffer_size - read_remaining_bytes),
-				       read_remaining_bytes) ;
+	 if ((fs != NULL) && (read_fd1 != NULL)) {
+             read_num_bytes = hdfsRead(fs, read_fd1, read_buffer, read_remaining_bytes) ;
 	 }
 	 if (read_fd2 != -1) {
-             read_num_bytes = read(read_fd2,
-    	    		           buffer + (buffer_size - read_remaining_bytes),
-			           read_remaining_bytes) ;
+             read_num_bytes = read(read_fd2, read_buffer, read_remaining_bytes) ;
 	 }
 
 	 /* Check errors */
@@ -224,10 +219,12 @@ int read_buffer ( hdfsFS fs, hdfsFile read_fd1, int read_fd2, void *buffer, int 
 
 	 /* Check end of file */
          if (read_num_bytes == 0) {
+	     DEBUG_PRINT("INFO[%s]:\t end of file, readed %ld.\n", __FUNCTION__, (buffer_size - read_remaining_bytes)) ;
 	     return (buffer_size - read_remaining_bytes) ;
          }
 
          read_remaining_bytes -= read_num_bytes ;
+         read_buffer          += read_num_bytes ;
      }
 
      return buffer_size ;
@@ -248,6 +245,7 @@ int copy_from_hdfs_to_local ( hdfsFS fs, char *hdfs_file_name, char *local_file_
          DEBUG_PRINT("ERROR[%s]:\t malloc for '%d'.\n", __FUNCTION__, BUFFER_SIZE) ;
          return -1 ;
      }
+     memset(buffer, 0, BUFFER_SIZE) ;
 
      // DEBUG
      DEBUG_PRINT("INFO[%s]:\t copy from '%s' to '%s'...\n", __FUNCTION__, hdfs_file_name, local_file_name) ;
@@ -300,6 +298,7 @@ int copy_from_local_to_hdfs ( hdfsFS fs, char *hdfs_file_name, char *local_file_
          DEBUG_PRINT("ERROR[%s]:\t malloc for '%d'.\n", __FUNCTION__, BUFFER_SIZE) ;
          return -1 ;
      }
+     memset(buffer, 0, BUFFER_SIZE) ;
 
      // DEBUG
      DEBUG_PRINT("INFO[%s]:\t copy from '%s' to '%s'...\n", __FUNCTION__, hdfs_file_name, local_file_name) ;
