@@ -220,7 +220,11 @@ verbose = 1 if hvd.rank() == 0 else 0
 #mnist_model.fit(dataset, steps_per_epoch=10 // hvd.size(), callbacks=callbacks, epochs=24, verbose=verbose)
 steps_per_epoch=nevents//batch_size
 
-mnist_model.fit(x=training_generator, steps_per_epoch=iters // hvd.size(), callbacks=callbacks, epochs=1, verbose=verbose)
+steps_per_epoch_param = 1
+if iters > hvd.size():
+    steps_per_epoch_param = iters // hvd.size()
+
+mnist_model.fit(x=training_generator, steps_per_epoch=steps_per_epoch_param, callbacks=callbacks, epochs=1, verbose=verbose)
 
 if hvd.rank() == 0:
     with open('output.txt', 'a') as fd:

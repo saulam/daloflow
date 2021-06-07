@@ -25,7 +25,7 @@
 daloflow_welcome ()
 {
 	echo ""
-	echo "  daloflow 3.8"
+	echo "  daloflow 3.9"
 	echo " --------------"
 	echo ""
 }
@@ -39,13 +39,13 @@ daloflow_help ()
 	echo ""
 	echo ": For a typical single node work session (with 4 containers and 2 process), please execute:"
 	echo "  $0 start 4"
-	echo "  $0 mpirun 2 \"python3 ./do_tf2kp_mnist.py --height 32 --width 32 --path dataset32x32\""
+	echo "  $0 mpirun 2 \"python3 ./do_tf2kp_mnist.py --height 32 --width 32 --path dataset32x32 --convs 1 --iters 2\""
 	echo "  ..."
 	echo "  $0 stop"
 	echo ""
 	echo ": For a typical multinode work session (with 4 containers and 2 process), please execute:"
 	echo "  $0 swarm-start 4"
-	echo "  $0 mpirun 2 \"python3 ./do_tf2kp_mnist.py --height 32 --width 32 --path dataset32x32\""
+	echo "  $0 mpirun 2 \"python3 ./do_tf2kp_mnist.py --height 32 --width 32 --path dataset32x32 --convs 1 --iters 2\""
 	echo "  ..."
 	echo "  $0 stop"
 	echo ""
@@ -298,6 +298,7 @@ daloflow_run ()
         # daloflow:v2
 	docker container exec -it $CNAME     \
 	       mpirun -np $NP -machinefile machines_horovod \
+	              --oversubscribe \
 		      -bind-to none -map-by slot -verbose --allow-run-as-root \
 		       -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
 		       -x NCCL_SOCKET_IFNAME=^lo,docker0 \
