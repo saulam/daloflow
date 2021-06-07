@@ -26,15 +26,16 @@
 #include <unistd.h>
 #include <limits.h>
 #include <libgen.h>
-#include <time.h>
 #include <pthread.h>
+#include <fcntl.h>
 #include <sys/stat.h>
-#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/sysinfo.h>
+#include <time.h>
+#include <sys/time.h>
 #include "hdfs.h"
 
-#define BUFFER_SIZE   (     128 * 1024)
+#define BUFFER_SIZE  (      128 * 1024)
 #define BLOCKSIZE    (64 * 1024 * 1024)
 
 #ifdef DEBUG
@@ -54,78 +55,116 @@ void mkdir_recursive ( const char *path )
      char  *subpath, *fullpath;
      struct stat s;
 
-     // if directories exist then return
+     /* If directories exist then return */
      ret = stat(path, &s);
      if (ret >= 0)
      {
          if (!S_ISDIR(s.st_mode)) {
-             DEBUG_PRINT("ERROR: path '%s' is not a directory.\n", path) ;
+             DEBUG_PRINT("ERROR[%s]:\t path '%s' is not a directory.\n", __FUNCTION__, path) ;
          }
 
          return ;
      }
 
-     // duplicate string (malloc inside)
+     /* Duplicate string (malloc inside) */
      fullpath = strdup(path);
 
-     // get last directory
+     /* Get last directory */
      subpath = dirname(fullpath);
      if (strlen(subpath) > 1) {
          mkdir_recursive(subpath);
      }
 
-     // mkdir last directory
+     /* mkdir last directory */
      ret = mkdir(path, 0700);
      //if (ret < 0) {
-     //    DEBUG_PRINT("ERROR: creating directory '%s'.\n", path) ;
+     //    DEBUG_PRINT("ERROR[%s]:\t creating directory '%s'.\n", __FUNCTION__, path) ;
      //    perror("mkdir:") ;
      //}
 
-     // free duplicate string
+     /* Free duplicate string */
      free(fullpath);
 }
 
-int create_local_file ( char *file_name_dst )
+int create_local_file ( char *local_file_name )
 {
      /* mkdir directory structure */
      struct stat st = {0} ;
      char        basename_org[PATH_MAX] ;
      char       *dirname_org ;
 
-     strcpy(basename_org, file_name_dst) ;
+     strcpy(basename_org, local_file_name) ;
      dirname_org = dirname(basename_org) ;
      if (stat(dirname_org, &st) == -1) {
          mkdir_recursive(dirname_org) ;
      }
 
-     /* open local file */
-     int write_fd = open(file_name_dst, O_WRONLY | O_CREAT, 0700) ;
+     /* Open local file */
+     int write_fd = open(local_file_name, O_WRONLY | O_CREAT, 0700) ;
      if (write_fd < 0) {
-         DEBUG_PRINT("ERROR: open fails to create '%s' file.\n", file_name_dst) ;
+         DEBUG_PRINT("ERROR[%s]:\t open fails to create '%s' file.\n", __FUNCTION__, local_file_name) ;
      }
 
      return write_fd ;
 }
 
-hdfsFile create_hdfs_file ( hdfsFS fs, char *file_name_dst )
+hdfsFile create_hdfs_file ( hdfsFS fs, char *hdfs_file_name )
 {
      hdfsFile write_fd ;
      char   basename_org[PATH_MAX] ;
      char  *dirname_org ;
 
-     // mkdir directory structure
-     strcpy(basename_org, file_name_dst) ;
+     /* mkdir directory structure */
+     strcpy(basename_org, hdfs_file_name) ;
      dirname_org = dirname(basename_org) ;
      hdfsCreateDirectory(fs, dirname_org);
 
-     /* open hdfs file */
-     write_fd = hdfsOpenFile(fs, file_name_dst, O_WRONLY|O_CREAT, 0, 0, 0) ;
+     /* Open hdfs file */
+     write_fd = hdfsOpenFile(fs, hdfs_file_name, O_WRONLY|O_CREAT, 0, 0, 0) ;
      if (!write_fd) {
-         DEBUG_PRINT("ERROR: hdfsOpenFile fails to create '%s'.\n", file_name_dst) ;
+         DEBUG_PRINT("ERROR[%s]:\t hdfsOpenFile fails to create '%s'.\n", __FUNCTION__, hdfs_file_name) ;
      }
 
      return write_fd ;
 }
+
+
+int cmptime_hdfs_local ( hdfsFS fs, char *hdfs_file_name, char *local_file_name )
+{
+     int ret ;
+     time_t t1 ;
+     time_t t2 ;
+     struct stat   local_attr ;
+     hdfsFileInfo *hdfs_attr ;
+
+     /* Metadata for local file */
+     ret = stat(local_file_name, &local_attr) ;
+     if (ret < 0) {
+         return -1 ;
+     }
+     t1 = local_attr.st_mtime ;
+
+     /* Metadata for HDFS file */
+     hdfs_attr = hdfsGetPathInfo(fs, hdfs_file_name) ;
+     if (NULL == hdfs_attr) {
+         return -1 ;
+     }
+     t2 = hdfs_attr->mLastMod ;
+     hdfsFreeFileInfo(hdfs_attr, 1) ;
+
+     // DEBUG
+     DEBUG_PRINT("INFO[%s]:\t Modification Time:\n |\tLocal = %s |\tHDFS  = %s\n", __FUNCTION__, ctime(&t1), ctime(&t2)) ;
+
+     /* 
+      * Return
+      *   +: local is newer, 
+      *   -: hdfs is newer, 
+      *   0: 'unmodified', 
+      *  -1: for errors ('return 2*x' to avoid -1 but on errors ;-))
+      */
+     return 2 * (t1 - t2) ;
+}
+
 
 int write_buffer ( hdfsFS fs, hdfsFile write_fd1, int write_fd2, void *buffer, int buffer_size, int num_readed_bytes )
 {
@@ -134,7 +173,7 @@ int write_buffer ( hdfsFS fs, hdfsFile write_fd1, int write_fd2, void *buffer, i
 
      while (write_remaining_bytes > 0)
      {
-	 // Write into hdfs (fs+write_fd1) or local file (write_fd2)...
+	 /* Write into hdfs (fs+write_fd1) or local file (write_fd2)... */
 	 if (fs != NULL) {
              write_num_bytes = hdfsWrite(fs, write_fd1,
 				         buffer + (buffer_size - write_remaining_bytes),
@@ -146,9 +185,9 @@ int write_buffer ( hdfsFS fs, hdfsFile write_fd1, int write_fd2, void *buffer, i
 			             write_remaining_bytes) ;
 	 }
 
-	 // check errors
+	 /* Check errors */
          if (write_num_bytes == -1) {
-	     DEBUG_PRINT("ERROR: write fails to write data.\n") ;
+	     DEBUG_PRINT("ERROR[%s]:\t write fails to write data.\n", __FUNCTION__) ;
 	     return -1 ;
          }
 
@@ -165,7 +204,7 @@ int read_buffer ( hdfsFS fs, hdfsFile read_fd1, int read_fd2, void *buffer, int 
 
      while (read_remaining_bytes > 0)
      {
-	 // Read from hdfs (fs+read_fd1) or local file (read_fd2)...
+	 /* Read from hdfs (fs+read_fd1) or local file (read_fd2)... */
 	 if (fs != NULL) {
              read_num_bytes = hdfsRead(fs, read_fd1,
 				       buffer + (buffer_size - read_remaining_bytes),
@@ -177,13 +216,13 @@ int read_buffer ( hdfsFS fs, hdfsFile read_fd1, int read_fd2, void *buffer, int 
 			           read_remaining_bytes) ;
 	 }
 
-	 // check errors
+	 /* Check errors */
          if (read_num_bytes == -1) {
-	     DEBUG_PRINT("ERROR: read fails to read data.\n") ;
+	     DEBUG_PRINT("ERROR[%s]:\t read fails to read data.\n", __FUNCTION__) ;
 	     return -1 ;
          }
 
-	 // check end of file
+	 /* Check end of file */
          if (read_num_bytes == 0) {
 	     return (buffer_size - read_remaining_bytes) ;
          }
@@ -195,7 +234,7 @@ int read_buffer ( hdfsFS fs, hdfsFile read_fd1, int read_fd2, void *buffer, int 
 }
 
 
-int copy_from_hdfs_to_local ( hdfsFS fs, char *file_name_org, char *file_name_dst )
+int copy_from_hdfs_to_local ( hdfsFS fs, char *hdfs_file_name, char *local_file_name )
 {
      int ret = -1 ;
      int write_fd ;
@@ -203,26 +242,26 @@ int copy_from_hdfs_to_local ( hdfsFS fs, char *file_name_org, char *file_name_ds
      tSize num_readed_bytes = 0 ;
      unsigned char *buffer = NULL ;
 
-     // allocate intermediate buffer
+     /* Allocate intermediate buffer */
      buffer = malloc(BUFFER_SIZE) ;
      if (NULL == buffer) {
-         DEBUG_PRINT("ERROR: malloc for '%d'.\n", BUFFER_SIZE) ;
+         DEBUG_PRINT("ERROR[%s]:\t malloc for '%d'.\n", __FUNCTION__, BUFFER_SIZE) ;
          return -1 ;
      }
 
      // DEBUG
-     DEBUG_PRINT("INFO: copy from '%s' to '%s'...\n", file_name_org, file_name_dst) ;
+     DEBUG_PRINT("INFO[%s]:\t copy from '%s' to '%s'...\n", __FUNCTION__, hdfs_file_name, local_file_name) ;
 
      /* Data from HDFS */
-     read_file = hdfsOpenFile(fs, file_name_org, O_RDONLY, 0, 0, 0) ;
+     read_file = hdfsOpenFile(fs, hdfs_file_name, O_RDONLY, 0, 0, 0) ;
      if (!read_file) {
          free(buffer) ;
-         DEBUG_PRINT("ERROR: hdfsOpenFile on '%s' for reading.\n", file_name_org) ;
+         DEBUG_PRINT("ERROR[%s]:\t hdfsOpenFile on '%s' for reading.\n", __FUNCTION__, hdfs_file_name) ;
          return -1 ;
      }
 
      /* Data to local file */
-     write_fd = create_local_file(file_name_dst) ;
+     write_fd = create_local_file(local_file_name) ;
      if (write_fd < 0) {
          hdfsCloseFile(fs, read_file) ;
          free(buffer) ;
@@ -247,7 +286,7 @@ int copy_from_hdfs_to_local ( hdfsFS fs, char *file_name_org, char *file_name_ds
      return ret ;
 }
 
-int copy_from_local_to_hdfs ( hdfsFS fs, char *file_name_org, char *file_name_dst )
+int copy_from_local_to_hdfs ( hdfsFS fs, char *hdfs_file_name, char *local_file_name )
 {
      int ret = -1 ;
      hdfsFile write_fd ;
@@ -255,29 +294,29 @@ int copy_from_local_to_hdfs ( hdfsFS fs, char *file_name_org, char *file_name_ds
      tSize num_readed_bytes = 0 ;
      unsigned char *buffer = NULL ;
 
-     // allocate intermediate buffer
+     /* Allocate intermediate buffer */
      buffer = malloc(BUFFER_SIZE) ;
      if (NULL == buffer) {
-         DEBUG_PRINT("ERROR: malloc for '%d'.\n", BUFFER_SIZE) ;
+         DEBUG_PRINT("ERROR[%s]:\t malloc for '%d'.\n", __FUNCTION__, BUFFER_SIZE) ;
          return -1 ;
      }
 
      // DEBUG
-     DEBUG_PRINT("INFO: copy from '%s' to '%s'...\n", file_name_org, file_name_dst) ;
+     DEBUG_PRINT("INFO[%s]:\t copy from '%s' to '%s'...\n", __FUNCTION__, hdfs_file_name, local_file_name) ;
 
      /* Data to HDFS */
-     write_fd = create_hdfs_file(fs, file_name_org) ;
+     write_fd = create_hdfs_file(fs, hdfs_file_name) ;
      if (!write_fd) {
          free(buffer) ;
          return -1 ;
      }
 
      /* Data from local file */
-     read_file = open(file_name_dst, O_RDONLY, 0700) ;
+     read_file = open(local_file_name, O_RDONLY, 0700) ;
      if (read_file < 0) {
          hdfsCloseFile(fs, write_fd) ;
          free(buffer) ;
-         DEBUG_PRINT("ERROR: open fails for reading from '%s' file.\n", file_name_dst) ;
+         DEBUG_PRINT("ERROR[%s]:\t open fails for reading from '%s' file.\n", __FUNCTION__, local_file_name) ;
          return -1 ;
      }
 
@@ -291,7 +330,7 @@ int copy_from_local_to_hdfs ( hdfsFS fs, char *file_name_org, char *file_name_ds
      }
      while ( (ret != -1) && (num_readed_bytes > 0) ) ;
 
-     // Free resources (ok)
+     /* Free resources (ok) */
      hdfsFlush(fs, write_fd) ;
      hdfsCloseFile(fs, write_fd) ;
      close(read_file) ;
@@ -300,21 +339,21 @@ int copy_from_local_to_hdfs ( hdfsFS fs, char *file_name_org, char *file_name_ds
      return ret ;
 }
 
-int hdfs_stats ( char *file_name_org, char *machine_name, char ***blocks_information )
+int hdfs_stats ( char *hdfs_file_name, char *machine_name, char ***blocks_information )
 {
      char hostname_list[1024] ;
 
-     // hostnames
+     /* Get hostnames */
      strcpy(hostname_list, "") ;
      for (int i=0; blocks_information[0][i] != NULL; i++) {
 	  sprintf(hostname_list, "%s+%s", hostname_list, blocks_information[0][i]) ;
      }
 
-     // is_remote
+     /* Get is_remote */
      int is_remote = (strncmp(machine_name, blocks_information[0][0], strlen(machine_name)) != 0) ;
 
-     // print metadata for this file
-     printf("{ name:'%s', is_remote:%d, hostnames:'%s' },\n", file_name_org, is_remote, hostname_list) ;
+     /* Print metadata for this file */
+     printf("{ name:'%s', is_remote:%d, hostnames:'%s' },\n", hdfs_file_name, is_remote, hostname_list) ;
 
      return 0 ;
 }
@@ -371,7 +410,7 @@ void * receptor ( void * param )
 
       // Initializate...
       memcpy(&p, param, sizeof(thargs_t)) ;
-      DEBUG_PRINT("INFO: 'receptor' initialized...\n");
+      DEBUG_PRINT("INFO[%s]:\t 'receptor' initialized...\n", __FUNCTION__);
 
       // Open listing file
       FILE *list_fd = fopen(p.list_files, "ro") ;
@@ -385,14 +424,14 @@ void * receptor ( void * param )
       ret = do_reception(list_fd, &p) ;
       while (ret != NULL)
       {
-	    // lock when not full...
+	    // Lock when not full...
             pthread_mutex_lock(&mutex);
             while (n_elementos == MAX_BUFFER) {
                    pthread_cond_wait(&no_lleno, &mutex);
 	    }
 
-	    // inserting element into the buffer
-            DEBUG_PRINT("INFO: 'receptor' enqueue request for '%s' at %d.\n", p.file_name_org, pos_receptor);
+	    // Inserting element into the buffer
+            DEBUG_PRINT("INFO[%s]:\t 'receptor' enqueue request for '%s' at %d.\n", __FUNCTION__, p.file_name_org, pos_receptor);
             memcpy((void *)&(buffer[pos_receptor]), (void *)&p, sizeof(thargs_t)) ;
             pos_receptor = (pos_receptor + 1) % MAX_BUFFER;
             n_elementos++;
@@ -404,12 +443,12 @@ void * receptor ( void * param )
             ret = do_reception(list_fd, &p) ;
       }
 
-      // signal end
+      // Signal end
       pthread_mutex_lock(&mutex);
       fin=1;
       pthread_cond_broadcast(&no_vacio);
       pthread_mutex_unlock(&mutex);
-      DEBUG_PRINT("INFO: 'receptor' finalized...\n");
+      DEBUG_PRINT("INFO[%s]:\t 'receptor' finalized...\n", __FUNCTION__);
 
       // close local
       fclose(list_fd) ;
@@ -426,31 +465,39 @@ void * do_service ( void *params )
        char      file_name_org[2*PATH_MAX] ;
        char  *** blocks_information;
 
-       // Default return value
+       /* Default return value */
        ret = 0 ;
 
-       // Set the initial org/dst file name...
+       /* Set the initial org/dst file name... */
        memcpy(&thargs, params, sizeof(thargs_t)) ;
        sprintf(file_name_org, "%s/%s", thargs.hdfs_path_org,   thargs.file_name_org) ;
        sprintf(file_name_dst, "%s/%s", thargs.destination_dir, thargs.file_name_org) ;
 
-       // Get HDFS information
+       /* Get HDFS information */
        blocks_information = hdfsGetHosts(thargs.fs, file_name_org, 0, BLOCKSIZE) ;
        if (NULL == blocks_information) {
-           DEBUG_PRINT("ERROR: hdfsGetHosts for '%s'.\n", thargs.file_name_org) ;
+           DEBUG_PRINT("ERROR[%s]:\t hdfsGetHosts for '%s'.\n", __FUNCTION__, thargs.file_name_org) ;
            pthread_exit((void *)(long)ret) ;
        }
 
-       // Do action with file...
+       /* Do action with file... */
        if (!strcmp(thargs.action, "hdfs2local"))
        {
+	   // local file is newer than HDFS file so skip it
+	   int diff_time = cmptime_hdfs_local(thargs.fs, file_name_org, file_name_dst) ;
+           if (diff_time > 0) {
+               hdfsFreeHosts(blocks_information);
+               return NULL ;
+           }
+
            //int is_remote = strncmp(thargs.machine_name, blocks_information[0][0], strlen(thargs.machine_name)) ;
            //if (0 != is_remote) {
                  ret = copy_from_hdfs_to_local(thargs.fs, file_name_org, file_name_dst) ;
            //}
 
-           // Show message...
-           DEBUG_PRINT("INFO: '%s' from node '%s' to node '%s': %s\n",
+           // show message...
+           DEBUG_PRINT("INFO[%s]:\t '%s' from node '%s' to node '%s': %s\n",
+		       __FUNCTION__,
                        thargs.file_name_org,
                        blocks_information[0][0],
                        thargs.machine_name,
@@ -465,7 +512,7 @@ void * do_service ( void *params )
            ret = hdfs_stats(file_name_org, thargs.machine_name, blocks_information) ;
        }
 
-       // The End
+       /* The End */
        hdfsFreeHosts(blocks_information);
        return NULL ;
 }
@@ -474,21 +521,21 @@ void * servicio ( void * param )
 {
       thargs_t p;
 
-      // signal initializate...
+      // Signal initializate...
       pthread_mutex_lock(&mutex);
       ha_arrancado = 1;
       pthread_cond_signal(&arrancado);
       pthread_mutex_unlock(&mutex);
-      DEBUG_PRINT("INFO: 'service' initialized...\n");
+      DEBUG_PRINT("INFO[%s]:\t 'service' initialized...\n", __FUNCTION__);
 
       for (;;)
       {
-	   // lock when not empty and not ended...
+	   // Lock when not empty and not ended...
            pthread_mutex_lock(&mutex);
            while (n_elementos == 0)
 	   {
                 if (fin==1) {
-                    DEBUG_PRINT("INFO: 'service' finalized.\n");
+                    DEBUG_PRINT("INFO[%s]:\t 'service' finalized.\n", __FUNCTION__);
                     pthread_cond_signal(&parado);
                     pthread_mutex_unlock(&mutex);
                     pthread_exit(0);
@@ -497,17 +544,17 @@ void * servicio ( void * param )
                 pthread_cond_wait(&no_vacio, &mutex);
            } // while
 
-	   // removing element from buffer...
-           DEBUG_PRINT("INFO: 'service' dequeue request at %d\n", pos_servicio);
+	   // Removing element from buffer...
+           DEBUG_PRINT("INFO[%s]:\t 'service' dequeue request at %d\n", __FUNCTION__, pos_servicio);
            memcpy((void *)&p, (void *)&(buffer[pos_servicio]), sizeof(thargs_t)) ;
            pos_servicio = (pos_servicio + 1) % MAX_BUFFER;
            n_elementos--;
 
-	   // signal not full...
+	   // Signal not full...
            pthread_cond_signal(&no_lleno);
            pthread_mutex_unlock(&mutex);
 
-	   // process and response...
+	   // Process and response...
            do_service(&p) ;
     }
 
