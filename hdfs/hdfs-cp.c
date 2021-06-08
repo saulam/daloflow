@@ -462,7 +462,6 @@ void * do_service ( void *params )
        thargs_t  thargs ;
        char      file_name_dst[2*PATH_MAX] ;
        char      file_name_org[2*PATH_MAX] ;
-       char  *** blocks_information;
 
        /* Default return value */
        ret = 0 ;
@@ -472,47 +471,44 @@ void * do_service ( void *params )
        sprintf(file_name_org, "%s/%s", thargs.hdfs_path_org,   thargs.file_name_org) ;
        sprintf(file_name_dst, "%s/%s", thargs.destination_dir, thargs.file_name_org) ;
 
-       /* Get HDFS information */
-       blocks_information = hdfsGetHosts(thargs.fs, file_name_org, 0, BLOCKSIZE) ;
-       if (NULL == blocks_information) {
-           DEBUG_PRINT("ERROR[%s]:\t hdfsGetHosts for '%s'.\n", __FUNCTION__, thargs.file_name_org) ;
-           pthread_exit((void *)(long)ret) ;
-       }
-
        /* Do action with file... */
        if (!strcmp(thargs.action, "hdfs2local"))
        {
 	   // local file is newer than HDFS file so skip it
 	   int diff_time = cmptime_hdfs_local(thargs.fs, file_name_org, file_name_dst) ;
            if (diff_time > 0) {
-               hdfsFreeHosts(blocks_information);
                return NULL ;
            }
 
-           //int is_remote = strncmp(thargs.machine_name, blocks_information[0][0], strlen(thargs.machine_name)) ;
-           //if (0 != is_remote) {
-                 ret = copy_from_hdfs_to_local(thargs.fs, file_name_org, file_name_dst) ;
-           //}
-
-           // show message...
-           DEBUG_PRINT("INFO[%s]:\t '%s' from node '%s' to node '%s': %s\n",
-		       __FUNCTION__,
-                       thargs.file_name_org,
-                       blocks_information[0][0],
-                       thargs.machine_name,
-                       (ret < 0) ? "Error found" : "Done") ;
+	   // copy remote to local...
+           ret = copy_from_hdfs_to_local(thargs.fs, file_name_org, file_name_dst) ;
        }
        if (!strcmp(thargs.action, "local2hdfs"))
        {
+           sprintf(file_name_org, "%s/%s", thargs.hdfs_path_org,   thargs.file_name_org) ;
+           sprintf(file_name_dst,  "./%s",                         thargs.file_name_org) ;
+
+	   // copy local to remote...
            ret = copy_from_local_to_hdfs(thargs.fs, file_name_org, file_name_dst) ;
        }
        if (!strcmp(thargs.action, "stats4hdfs"))
        {
+	   char *** blocks_information;
+
+	   /* Get HDFS information */
+	   blocks_information = hdfsGetHosts(thargs.fs, file_name_org, 0, BLOCKSIZE) ;
+	   if (NULL == blocks_information) {
+	       DEBUG_PRINT("ERROR[%s]:\t hdfsGetHosts for '%s'.\n", __FUNCTION__, thargs.file_name_org) ;
+	       pthread_exit((void *)(long)ret) ;
+	   }
+
+	   // file metadata...
            ret = hdfs_stats(file_name_org, thargs.machine_name, blocks_information) ;
+
+           hdfsFreeHosts(blocks_information);
        }
 
        /* The End */
-       hdfsFreeHosts(blocks_information);
        return NULL ;
 }
 
@@ -565,13 +561,16 @@ void * servicio ( void * param )
 void main_usage ( char *app_name )
 {
        printf("\n") ;
-       printf("  HDFS Copy\n") ;
-       printf(" -----------\n") ;
+       printf("  HDFS Copy 1.0\n") ;
+       printf(" ---------------\n") ;
        printf("\n") ;
        printf("  Usage:\n") ;
        printf("\n") ;
        printf("  > %s hdfs2local <hdfs/path> <file_list.txt> <cache/path>\n", app_name) ;
        printf("    Copy from a HDFS path to a local cache path a list of files (within file_list.txt).\n") ;
+       printf("\n") ;
+       printf("  > %s local2hdfs <hdfs/path> <file_list.txt> <cache/path>\n", app_name) ;
+       printf("    Copy to a HDFS path a list of files (within file_list.txt).\n") ;
        printf("\n") ;
        printf("  > %s stats4hdfs <hdfs/path> <file_list.txt> <cache/path>\n", app_name) ;
        printf("    List HDFS metadata from the list of files within file_list.txt.\n") ;
@@ -665,7 +664,7 @@ int main ( int argc, char *argv[] )
     t2 = (long)timenow.tv_sec * 1000 + (long)timenow.tv_usec / 1000 ;
 
     // Imprimir t2-t1...
-    printf("Tiempo total: %lf seconds.\n", (t2-t1)/1000.0);
+    printf("Total time: %lf seconds.\n", (t2-t1)/1000.0);
     return 0;
 }
 
