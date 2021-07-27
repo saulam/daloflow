@@ -56,7 +56,7 @@ def do_cache(cache_path):
         f.close()
 
     # copy from hdfs to local
-    status = os.system("hdfs/hdfs-cp.sh" + " " + hdfs_dir + " " + hdfs_list + " " + cache_dir)
+    status = os.system("hdfs/hdfs-cp.sh" + " " + "hdfs2local" + " "  + hdfs_dir + " " + hdfs_list + " " + cache_dir)
     can_continue_with_cache = os.WIFEXITED(status) and (os.WEXITSTATUS(status) == 0)
     if not can_continue_with_cache:
         return ''
@@ -70,12 +70,12 @@ os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"]="0,1"
 
 parser = argparse.ArgumentParser(description='Build dataset.')
-parser.add_argument('--height',  type=int, default=32,        nargs=1, required=False, help='an integer for the height')
-parser.add_argument('--width',   type=int, default=32,        nargs=1, required=False, help='an integer for the width')
-parser.add_argument('--path',    type=str, default='/mnt/local-storage/daloflow/dataset32x32', nargs=1, required=False, help='dataset path')
-parser.add_argument('--cache',   type=str, default='nocache', nargs=1, required=False, help='dataset cache path')
-parser.add_argument('--convs',   type=int, default='1',       nargs=1, required=False, help='number of conv layers')
-parser.add_argument('--iters',   type=int, default='1000',    nargs=1, required=False, help='number of iterations per epoch')
+parser.add_argument('--height',  type=int, default=32,              nargs=1, required=False, help='an integer for the height')
+parser.add_argument('--width',   type=int, default=32,              nargs=1, required=False, help='an integer for the width')
+parser.add_argument('--path',    type=str, default='dataset32x32',  nargs=1, required=False, help='dataset path')
+parser.add_argument('--cache',   type=str, default='nocache',       nargs=1, required=False, help='dataset cache path')
+parser.add_argument('--convs',   type=int, default='1',             nargs=1, required=False, help='number of conv layers')
+parser.add_argument('--iters',   type=int, default='1000',          nargs=1, required=False, help='number of iterations per epoch')
 args = parser.parse_args()
 
 #

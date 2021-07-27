@@ -109,7 +109,7 @@ if can_continue_with_cache:
 
     # copy from hdfs to local
     if can_continue_with_cache:
-       status = os.system("hdfs/hdfs-cp.sh" + " " + hdfs_dir + " " + hdfs_list + " " + cache_dir)
+       status = os.system("hdfs/hdfs-cp.sh" + " " + "hdfs2local" + " "  + hdfs_dir + " " + hdfs_list + " " + cache_dir)
        can_continue_with_cache = os.WIFEXITED(status) and (os.WEXITSTATUS(status) == 0)
 
     if can_continue_with_cache:
