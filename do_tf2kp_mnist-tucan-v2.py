@@ -101,12 +101,12 @@ class TimingCallback(Callback):
     self.logs.append(time.time()-self.starttime)
 
 # train and validation params
-TRAIN_PARAMS = {'height':height,
-                'width':width,
-                'channels':channels,
-                'batch_size':32,
-                'images_path':images_path,
-                'shuffle':shuffle}
+TRAIN_PARAMS = { 'height':height,
+                 'width':width,
+                 'channels':channels,
+                 'batch_size':32,
+                 'images_uri':images_path,
+                 'shuffle':shuffle }
 
 # resources
 hostname  = socket.gethostname()
@@ -126,7 +126,7 @@ partition = {'train' : list(labels_train.keys()), 'validation' : list(labels_tes
 # Copy from hdfs to local
 cache_dir = do_cache(cache_path)
 if cache_dir != '':
-    TRAIN_PARAMS['images_path'] = cache_dir
+    TRAIN_PARAMS['images_uri'] = cache_dir
 else:
     print("CACHE: cache from HDFS is not enabled.\n")
 

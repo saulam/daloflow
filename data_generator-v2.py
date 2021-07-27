@@ -37,7 +37,7 @@ class DataGenerator(object):
             self.client      = Client(o.hostname, o.port)  # images_uri: 'hdfs://10.0.40.19:9600/daloflow/dataset32x32/'
         else:
             self.images_path = images_uri
-            self.client      = null
+            self.client      = None
 
     '''
     Goes through the dataset and outputs one batch at a time.
@@ -98,7 +98,7 @@ class DataGenerator(object):
             # Read image
             print(' * image file name: ' + image_file_name)
             try:
-              if self.client == null:
+              if self.client == None:
                  with open(image_file_name, 'rb') as image_file:
                      pixels = np.fromstring(zlib.decompress(image_file.read()), dtype=np.uint8, sep='').reshape(self.height, self.width, self.channels)
               else:
