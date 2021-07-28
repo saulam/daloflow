@@ -107,7 +107,7 @@ class DataGenerator(object):
                  t = '/tmp/image.dat.' + str(os.getpid())
                  if os.path.exists(t):
                     os.remove(t)
-                 for f in client.copyToLocal([image_file_name], t):
+                 for f in self.client.copyToLocal([image_file_name], t):
                       if f['result'] == True:
                          with open(t, 'rb') as image_file:
                               pixels = np.fromstring(zlib.decompress(image_file.read()), dtype=np.uint8, sep='').reshape(self.height, self.width, self.channels)
