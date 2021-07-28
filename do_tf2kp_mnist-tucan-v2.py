@@ -13,16 +13,18 @@
 # limitations under the License.
 # ==============================================================================
 
-import tensorflow as tf
-import horovod.tensorflow.keras as hvd
-import socket
 import os
-from data_generator import DataGenerator
-import pickle as pk
-import argparse
 import time
 import sys
-from tensorflow.keras.callbacks import Callback
+import argparse
+import socket
+from   snakebite.client import Client
+from   urllib.parse import urlparse
+import tensorflow as tf
+from   tensorflow.keras.callbacks import Callback
+import horovod.tensorflow.keras as hvd
+import pickle as pk
+from   data_generator import DataGenerator
 
 
 # do_cache: Copy from hdfs to local
@@ -65,6 +67,34 @@ def do_cache(cache_path):
     return cache_dir
 
 
+# do_read_lables: Read file data
+def do_read_labels(file_uri):
+    o = urlparse(file_uri)
+    t = '/tmp/image.dat.' + str(os.getpid())
+
+    try:
+      if o.scheme != 'hdfs':
+         with open(o.path, 'rb') as fd:
+              labels_train, labels_test = pk.load(fd)
+      else:
+         if os.path.exists(t):
+            os.remove(t)
+         client = Client(o.hostname, o.port)  # images_uri: 'hdfs://10.0.40.19:9600/daloflow/dataset32x32/'
+         for f in client.copyToLocal([o.path], t):
+              if f['result'] == True:
+                 with open(t, 'rb') as fd:
+                      labels_train, labels_test = pk.load(fd)
+                 os.remove(t)
+              else:
+                 print('File ' + f['path'] + ' NOT copied because "' + str(f['error']) + '", sorry !')
+                 return None, None
+    except:
+      print('Exception ' + str(sys.exc_info()[0]) + ' on file ' + file_uri)
+      return None, None
+
+    return labels_train, labels_test
+
+
 # manually specify the GPUs to use
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"]="0,1"
@@ -101,24 +131,30 @@ class TimingCallback(Callback):
     self.logs.append(time.time()-self.starttime)
 
 # train and validation params
-TRAIN_PARAMS = { 'height':height,
-                 'width':width,
-                 'channels':channels,
-                 'batch_size':32,
-                 'images_uri':images_path,
-                 'shuffle':shuffle }
+TRAIN_PARAMS = {'height':height,
+                'width':width,
+                'channels':channels,
+                'batch_size':32,
+                'images_uri':images_path,
+                'shuffle':shuffle}
 
 # resources
 hostname  = socket.gethostname()
 local_ip  = socket.gethostbyname(hostname)
 file_name = images_path + '/labels.p'
-try:
-    with open(file_name, 'rb') as fd:
-         labels_train, labels_test = pk.load(fd)
-except Exception as e:
+
+labels_train, labels_test = do_read_labels(file_name)
+if labels_train == None:
     print("ERROR: file " + file_name + " couldn't be opened on " + local_ip)
-    print("ERROR: " + str(e))
     sys.exit("Exit.")
+
+#try:
+#    with open(file_name, 'rb') as fd:
+#         labels_train, labels_test = pk.load(fd)
+#except Exception as e:
+#    print("ERROR: file " + file_name + " couldn't be opened on " + local_ip)
+#    print("ERROR: " + str(e))
+#    sys.exit("Exit.")
 
 nevents=len(list(labels_train.keys()))
 partition = {'train' : list(labels_train.keys()), 'validation' : list(labels_test.keys())}
@@ -140,7 +176,7 @@ validation_generator = DataGenerator(**TRAIN_PARAMS).generate(labels_test,  part
 # Horovod: initialize Horovod.
 hvd.init()
 
-print('%s, %d' % (local_ip, hvd.local_rank()))
+print('[hvd] local_ip:%s, local_rank:%d' % (local_ip, hvd.local_rank()))
 
 # Horovod: pin GPU to be used to process local rank (one GPU per process)
 gpus = tf.config.experimental.list_physical_devices('GPU')

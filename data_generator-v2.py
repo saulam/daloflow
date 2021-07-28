@@ -8,6 +8,7 @@ __email__   = "saul.alonso.monsalve@cern.ch"
 
 
 import os
+import sys
 import zlib
 import numpy as np
 from   string import digits
@@ -38,6 +39,7 @@ class DataGenerator(object):
         else:
             self.images_path = images_uri
             self.client      = None
+        #print(' * image uri: ' + self.images_uri)
 
     '''
     Goes through the dataset and outputs one batch at a time.
@@ -96,18 +98,20 @@ class DataGenerator(object):
             image_file_name = self.images_path + '/'.join(ID.split('/')[1:]) + '.tar.gz'
 
             # Read image
-            print(' * image file name: ' + image_file_name)
+            #print(' * image file name: ' + image_file_name)
             try:
               if self.client == None:
                  with open(image_file_name, 'rb') as image_file:
                      pixels = np.fromstring(zlib.decompress(image_file.read()), dtype=np.uint8, sep='').reshape(self.height, self.width, self.channels)
               else:
-                 os.remove('/tmp/image.dat') ;
-                 for f in client.copyToLocal([image_file_name], '/tmp/image.dat'):
+                 t = '/tmp/image.dat.' + str(os.getpid())
+                 if os.path.exists(t):
+                    os.remove(t)
+                 for f in client.copyToLocal([image_file_name], t):
                       if f['result'] == True:
-                         with open('/tmp/image.dat', 'rb') as image_file:
+                         with open(t, 'rb') as image_file:
                               pixels = np.fromstring(zlib.decompress(image_file.read()), dtype=np.uint8, sep='').reshape(self.height, self.width, self.channels)
-                         os.remove('/tmp/image.dat') ;
+                         os.remove(t)
                       else:
                          print('File ' + f['path'] + ' NOT copied because "' + str(f['error']) + '", sorry !')
             except:
