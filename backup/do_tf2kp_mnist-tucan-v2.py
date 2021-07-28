@@ -30,6 +30,7 @@ from   data_generator import DataGenerator
 # do_cache: Copy from hdfs to local
 def do_cache(cache_path):
     # cache_path:
+    # '/user/jrivadeneira/daloflow/dataset32x32/:/mnt/local-storage/daloflow/dataset-cache/dataset32x32/'
     cache_parts = cache_path.split(':')
     if len(cache_parts) != 2:
         return ''
@@ -78,7 +79,7 @@ def do_read_labels(file_uri):
       else:
          if os.path.exists(t):
             os.remove(t)
-         client = Client(o.hostname, o.port)
+         client = Client(o.hostname, o.port)  # images_uri: 'hdfs://10.0.40.19:9600/daloflow/dataset32x32/'
          for f in client.copyToLocal([o.path], t):
               if f['result'] == True:
                  with open(t, 'rb') as fd:
@@ -94,17 +95,9 @@ def do_read_labels(file_uri):
     return labels_train, labels_test
 
 
-class TimingCallback(Callback):
-  def __init__(self):
-    self.logs=[]
-  def on_epoch_begin(self, epoch, logs={}):
-    self.starttime=time.time()
-  def on_epoch_end(self, epoch, logs={}):
-    self.logs.append(time.time()-self.starttime)
-
 
 #
-# main
+# Main
 #
 
 # manually specify the GPUs to use
@@ -132,6 +125,14 @@ channels         = 1
 batch_size       = 32
 shuffle          = True
 
+class TimingCallback(Callback):
+  def __init__(self):
+    self.logs=[]
+  def on_epoch_begin(self, epoch, logs={}):
+    self.starttime=time.time()
+  def on_epoch_end(self, epoch, logs={}):
+    self.logs.append(time.time()-self.starttime)
+
 # train and validation params
 TRAIN_PARAMS = {'height':height,
                 'width':width,
@@ -149,6 +150,14 @@ labels_train, labels_test = do_read_labels(file_name)
 if labels_train == None:
     print("ERROR: file " + file_name + " couldn't be opened on " + local_ip)
     sys.exit("Exit.")
+
+#try:
+#    with open(file_name, 'rb') as fd:
+#         labels_train, labels_test = pk.load(fd)
+#except Exception as e:
+#    print("ERROR: file " + file_name + " couldn't be opened on " + local_ip)
+#    print("ERROR: " + str(e))
+#    sys.exit("Exit.")
 
 nevents=len(list(labels_train.keys()))
 partition = {'train' : list(labels_train.keys()), 'validation' : list(labels_test.keys())}
