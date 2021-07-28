@@ -13,27 +13,99 @@
 # limitations under the License.
 # ==============================================================================
 
-import tensorflow as tf
-import horovod.tensorflow.keras as hvd
-import socket
 import os
-from data_generator import DataGenerator
-import pickle as pk
-import argparse
 import time
-from tensorflow.keras.callbacks import Callback
+import sys
+import argparse
+import socket
+from   snakebite.client import Client
+from   urllib.parse import urlparse
+import tensorflow as tf
+from   tensorflow.keras.callbacks import Callback
+import horovod.tensorflow.keras as hvd
+import pickle as pk
+from   data_generator import DataGenerator
+
+
+# do_cache: Copy from hdfs to local
+def do_cache(cache_path):
+    # cache_path:
+    # '/user/jrivadeneira/daloflow/dataset32x32/:/mnt/local-storage/daloflow/dataset-cache/dataset32x32/'
+    cache_parts = cache_path.split(':')
+    if len(cache_parts) != 2:
+        return ''
+
+    # param to choose if we want local copy or not
+    hdfs_dir  = cache_parts[0]
+    cache_dir = cache_parts[1]
+    hdfs_list = cache_dir + "/list.txt"
+
+    # add the container name at the end cache_dir
+    container_name = os.uname()[1]
+    cache_dir = cache_dir + "/" + container_name
+
+    status = os.system("mkdir -p " + cache_dir)
+    can_continue_with_cache = os.WIFEXITED(status) and (os.WEXITSTATUS(status) == 0)
+    if not can_continue_with_cache:
+        return ''
+
+    # list of files to copy in local
+    with open(hdfs_list, "w") as f:
+        f.write('labels.p\n')
+        for item in partition['train']:
+            fname = '/'.join(item.split('/')[1:]) + '.tar.gz\n'
+            f.write(fname[1:])
+        f.close()
+
+    # copy from hdfs to local
+    status = os.system("hdfs/hdfs-cp.sh" + " " + "hdfs2local" + " "  + hdfs_dir + " " + hdfs_list + " " + cache_dir)
+    can_continue_with_cache = os.WIFEXITED(status) and (os.WEXITSTATUS(status) == 0)
+    if not can_continue_with_cache:
+        return ''
+
+    # return cache_dir
+    return cache_dir
+
+
+# do_read_lables: Read file data
+def do_read_labels(file_uri):
+    o = urlparse(file_uri)
+    t = '/tmp/image.dat.' + str(os.getpid())
+
+    try:
+      if o.scheme != 'hdfs':
+         with open(o.path, 'rb') as fd:
+              labels_train, labels_test = pk.load(fd)
+      else:
+         if os.path.exists(t):
+            os.remove(t)
+         client = Client(o.hostname, o.port)  # images_uri: 'hdfs://10.0.40.19:9600/daloflow/dataset32x32/'
+         for f in client.copyToLocal([o.path], t):
+              if f['result'] == True:
+                 with open(t, 'rb') as fd:
+                      labels_train, labels_test = pk.load(fd)
+                 os.remove(t)
+              else:
+                 print('File ' + f['path'] + ' NOT copied because "' + str(f['error']) + '", sorry !')
+                 return None, None
+    except:
+      print('Exception ' + str(sys.exc_info()[0]) + ' on file ' + file_uri)
+      return None, None
+
+    return labels_train, labels_test
+
 
 # manually specify the GPUs to use
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"]="0,1"
 
 parser = argparse.ArgumentParser(description='Build dataset.')
-parser.add_argument('--height',  type=int, default=32,        nargs=1, required=False, help='an integer for the height')
-parser.add_argument('--width',   type=int, default=32,        nargs=1, required=False, help='an integer for the width')
-parser.add_argument('--path',    type=str, default='/mnt/local-storage/daloflow/dataset32x32', nargs=1, required=False, help='dataset path')
-parser.add_argument('--cache',   type=str, default='nocache', nargs=1, required=False, help='dataset cache path')
-parser.add_argument('--convs',   type=int, default='1',       nargs=1, required=False, help='number of conv layers')
-parser.add_argument('--iters',   type=int, default='1000',    nargs=1, required=False, help='number of iterations per epoch')
+parser.add_argument('--height',  type=int, default=32,              nargs=1, required=False, help='an integer for the height')
+parser.add_argument('--width',   type=int, default=32,              nargs=1, required=False, help='an integer for the width')
+parser.add_argument('--path',    type=str, default='dataset32x32',  nargs=1, required=False, help='dataset path')
+parser.add_argument('--cache',   type=str, default='nocache',       nargs=1, required=False, help='dataset cache path')
+parser.add_argument('--convs',   type=int, default='1',             nargs=1, required=False, help='number of conv layers')
+parser.add_argument('--iters',   type=int, default='1000',          nargs=1, required=False, help='number of iterations per epoch')
 args = parser.parse_args()
 
 #
@@ -63,60 +135,36 @@ TRAIN_PARAMS = {'height':height,
                 'width':width,
                 'channels':channels,
                 'batch_size':32,
-                'images_path':images_path,
+                'images_uri':images_path,
                 'shuffle':shuffle}
 
 # resources
 hostname  = socket.gethostname()
 local_ip  = socket.gethostbyname(hostname)
 file_name = images_path + '/labels.p'
-try:
-    with open(file_name, 'rb') as fd:
-         labels_train, labels_test = pk.load(fd)
-except:
-    print("Error: file " + file_name + " couldn't be opened on " + local_ip)
+
+labels_train, labels_test = do_read_labels(file_name)
+if labels_train == None:
+    print("ERROR: file " + file_name + " couldn't be opened on " + local_ip)
+    sys.exit("Exit.")
+
+#try:
+#    with open(file_name, 'rb') as fd:
+#         labels_train, labels_test = pk.load(fd)
+#except Exception as e:
+#    print("ERROR: file " + file_name + " couldn't be opened on " + local_ip)
+#    print("ERROR: " + str(e))
+#    sys.exit("Exit.")
 
 nevents=len(list(labels_train.keys()))
 partition = {'train' : list(labels_train.keys()), 'validation' : list(labels_test.keys())}
 
 # Copy from hdfs to local
-# Example of cache_path:
-# '/user/jrivadeneira/daloflow/dataset32x32/:/mnt/local-storage/daloflow/dataset-cache/dataset32x32/'
-cache_parts = cache_path.split(':')
-can_continue_with_cache = (len(cache_parts) == 2)
-if can_continue_with_cache:
-    # param to choose if we want local copy or not
-    hdfs_dir  = cache_parts[0]
-    cache_dir = cache_parts[1]
-    hdfs_list = cache_dir + "/list.txt"
-
-    # add the container name at the end cache_dir
-    container_name = os.uname()[1]
-    cache_dir = cache_dir + "/" + container_name
-
-    if can_continue_with_cache:
-       status = os.system("mkdir -p " + cache_dir)
-       can_continue_with_cache = os.WIFEXITED(status) and (os.WEXITSTATUS(status) == 0)
-
-    # list of files to copy in local
-    if can_continue_with_cache:
-       with open(hdfs_list, "w") as f:
-           f.write('labels.p\n')
-           for item in partition['train']:
-               fname = '/'.join(item.split('/')[1:]) + '.tar.gz\n'
-               f.write(fname[1:])
-           f.close()
-
-    # copy from hdfs to local
-    if can_continue_with_cache:
-       status = os.system("hdfs/hdfs-cp.sh" + " " + hdfs_dir + " " + hdfs_list + " " + cache_dir)
-       can_continue_with_cache = os.WIFEXITED(status) and (os.WEXITSTATUS(status) == 0)
-
-    if can_continue_with_cache:
-       TRAIN_PARAMS['images_path'] = cache_dir
-    else:
-       print("CACHE: cache from HDFS is not enabled.\n")
-#
+cache_dir = do_cache(cache_path)
+if cache_dir != '':
+    TRAIN_PARAMS['images_uri'] = cache_dir
+else:
+    print("CACHE: cache from HDFS is not enabled.\n")
 
 '''
 ************** GENERATORS **************
@@ -128,7 +176,7 @@ validation_generator = DataGenerator(**TRAIN_PARAMS).generate(labels_test,  part
 # Horovod: initialize Horovod.
 hvd.init()
 
-print('%s, %d' % (local_ip, hvd.local_rank()))
+print('[hvd] local_ip:%s, local_rank:%d' % (local_ip, hvd.local_rank()))
 
 # Horovod: pin GPU to be used to process local rank (one GPU per process)
 gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -137,17 +185,7 @@ for gpu in gpus:
 if gpus:
     tf.config.experimental.set_visible_devices(gpus[hvd.local_rank()], 'GPU')
 
-'''
-(mnist_images, mnist_labels), _ = \
-    tf.keras.datasets.mnist.load_data(path='mnist-%d.npz' % hvd.rank())
-
-dataset = tf.data.Dataset.from_tensor_slices(
-    (tf.cast(mnist_images[..., tf.newaxis] / 255.0, tf.float32),
-             tf.cast(mnist_labels, tf.int64))
-)
-dataset = dataset.repeat().shuffle(10000).batch(128)
-'''
-
+# Build model...
 input_shape = [height,width,channels]
 img_input = tf.keras.layers.Input(shape=input_shape, name='input')
 x = tf.keras.layers.Conv2D(32, [3, 3], activation='relu')(img_input)
@@ -162,18 +200,6 @@ x = tf.keras.layers.Dropout(0.5)(x)
 x = tf.keras.layers.Dense(10, activation='softmax')(x)
 mnist_model = tf.keras.models.Model(inputs=img_input, outputs=x, name='my_model')
 mnist_model.summary()
-'''
-mnist_model = tf.keras.Sequential([
-    tf.keras.layers.Conv2D(32, [3, 3], activation='relu'),
-    tf.keras.layers.Conv2D(64, [3, 3], activation='relu'),
-    tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
-    tf.keras.layers.Dropout(0.25),
-    tf.keras.layers.Flatten(),
-    tf.keras.layers.Dense(128, activation='relu'),
-    tf.keras.layers.Dropout(0.5),
-    tf.keras.layers.Dense(10, activation='softmax')
-])
-'''
 
 # Horovod: adjust learning rate based on number of GPUs.
 opt = tf.optimizers.Adam(0.001 * hvd.size())
@@ -226,8 +252,8 @@ if iters > hvd.size():
 
 mnist_model.fit(x=training_generator, steps_per_epoch=steps_per_epoch_param, callbacks=callbacks, epochs=1, verbose=verbose)
 
+# update output.txt
 if hvd.rank() == 0:
     with open('output.txt', 'a') as fd:
         fd.write(str(height)+'x'+str(width)+' '+str(convs)+' '+str(hvd.size()) + ' '+str(32150.*cb.logs[0]/iters)+' s\n')
-
 

@@ -515,8 +515,6 @@ int do_service ( thargs_t *thargs )
        }
        if (!strcmp(thargs->action, "local2hdfs"))
        {
-           sprintf(file_name_dst, "./%s", thargs->file_name_org) ;
-
 	   // copy local to remote...
            ret = copy_from_local_to_hdfs(thargs->fs, file_name_org, file_name_dst) ;
        }
