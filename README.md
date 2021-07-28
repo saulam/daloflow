@@ -4,7 +4,7 @@
 </html>
 
 ## Getting daloflow and initial setup:
-1. To clone from github:
+1. Clone from github and initialize for cpu (gpu option is also available):
 ```bash
  git clone https://github.com/saulam/daloflow.git
  cd daloflow
@@ -15,7 +15,7 @@
 ```bash
  ./daloflow.sh prerequisites
 ```
-3. To build the docker image:
+3. Build the docker image:
 ```bash
  ./daloflow.sh build
 ```
@@ -35,7 +35,7 @@ A new single node work session:
 ./daloflow.sh stop
 ```
 
-For example, with "./daloflow.sh start" four container is spin-up in one node, the current one (NC=4).
+For example, with "./daloflow.sh start" four container are spin-up in one node, the current one (NC=4).
 Then, do_task.py was executed with 2 process (NP=2, only two containers are used).
 
 <html>
@@ -51,7 +51,7 @@ A new work session using several nodes:
 ./daloflow.sh stop
 ```
 
-For example, with "./daloflow.sh swarm-start" a container is spin-up in four nodes (NC=4, one container per node).
+For example, with "./daloflow.sh swarm-start" containers are spin-up in four nodes (NC=4, one container per node).
 Then, do_task.py was executed with 2 process (NP=2) on the first two nodes.
 
 <html>
@@ -72,7 +72,7 @@ python3 mk_dataset.py --height 32 --width 32 --ntrain 1000000 --ntest 1000
 ```
 3. To execute a bash in a container:
 ```bash
- ./daloflow.sh bash <id container, from 1 up to NC>
+ ./daloflow.sh bash <container id: from 1 up to NC>
 ```
 
 
