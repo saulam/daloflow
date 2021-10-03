@@ -131,11 +131,11 @@ class DataGenerator(object):
         pixels = None
         #print(' * image file name: ' + image_file_name)
 
-        if   self.cache_mode == 'local'  or self.cache_mode == 'nocache':
+        if   self.cache_mode == 'hdfs2local' or self.cache_mode == 'hdfs2local-full':
              pixels = __get_data_local(image_file_name)
-        elif self.cache_mode == 'remote' or self.cache_mode == 'remote-all':
+        elif self.cache_mode == 'nocache':
              pixels = self.__get_data_remote(image_file_name)
-        elif self.cache_mode == 'remote-part':
+        elif self.cache_mode == 'hdfs2local-partial':
              pixels = __get_data_local(image_file_name)
              if pixels == None:
                 pixels = __get_data_remote(image_file_name)
