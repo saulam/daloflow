@@ -167,7 +167,7 @@ int cmptime_hdfs_local ( hdfsFS fs, char *hdfs_file_name, char *local_file_name 
      return 2 * (t1 - t2) ;
 }
 
-int check_hdfs_locality ( hdfsFS fs, char *hdfs_file_name )
+int check_hdfs_locality ( hdfsFS fs, char *hdfs_file_name, char *machine_name )
 {
      int ret = 0;
 
@@ -548,7 +548,7 @@ int do_service ( thargs_t *thargs )
        if (!strcmp(thargs->action, "hdfs2local-partial"))
        {
 	   // check if it is a HDFS local file
-	   int in_local_hdfs_node = check_hdfs_locality(thargs->fs, file_name_org) ;
+	   int in_local_hdfs_node = check_hdfs_locality(thargs->fs, file_name_org, thargs->machine_name) ;
         
 	   // copy remote to local...
            if (in_local_hdfs_node == 0) {
