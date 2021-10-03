@@ -2,7 +2,7 @@
 This is the generator module.
 """
 
-__version__ = '1.2'
+__version__ = '1.5'
 __author__  = 'Saul Alonso-Monsalve'
 __email__   = "saul.alonso.monsalve@cern.ch"
 
@@ -88,13 +88,13 @@ class DataGenerator(object):
     '''
     def __get_data_local(self, image_file_name):
         'Get data from local file system path'
-        pixels = None # TODO!!!
+        pixels = None
 
         try:
            with open(image_file_name, 'rb') as image_file:
                 pixels = np.fromstring(zlib.decompress(image_file.read()), dtype=np.uint8, sep='').reshape(self.height, self.width, self.channels)
         except:
-          print('Exception ' + str(sys.exc_info()[0]) + ' on file ' + image_file_name)
+           print('Exception ' + str(sys.exc_info()[0]) + ' on file ' + image_file_name)
 
         return pixels
 
@@ -103,7 +103,7 @@ class DataGenerator(object):
     '''
     def __get_data_remote(self, image_file_name):
         'Get data from HDFS'
-        pixels = None # TODO!!!
+        pixels = None
         if self.client == None:
            return pixels
 
@@ -126,14 +126,21 @@ class DataGenerator(object):
     '''
     Get data: local or remote
     '''
-    def __get_data_lor(self, image_file_name):
+    def __get_data(self, image_file_name):
         'Get data: local or remote'
-        # TODO! remote-part, if local not exist -> get remote
-        if self.client == None:
-           return __get_data_local(image_file_name)
+        pixels = None
+        #print(' * image file name: ' + image_file_name)
+
+        if   self.cache_mode == 'local'  or self.cache_mode == 'nocache':
+             pixels = __get_data_local(image_file_name)
+        elif self.cache_mode == 'remote' or self.cache_mode == 'remote-all':
+             pixels = self.__get_data_remote(image_file_name)
+        elif self.cache_mode == 'remote-part':
+             pixels = __get_data_local(image_file_name)
+             if pixels == None:
+                pixels = __get_data_remote(image_file_name)
         else:
-           return __get_data_remote(image_file_name)
-        # /TODO! remote-part, if local not exist -> get remote
+             print('ERROR: unknown "' + self.cache_mode + '" cache mode')
 
         return pixels
 
@@ -155,15 +162,7 @@ class DataGenerator(object):
             image_file_name = self.images_path + '/'.join(ID.split('/')[1:]) + '.tar.gz'
 
             # Read image
-            #print(' * image file name: ' + image_file_name)
-            if   self.cache_mode == 'local'  or self.cache_mode == 'nocache':
-                 pixels = __get_data_local(image_file_name)
-            elif self.cache_mode == 'remote' or self.cache_mode == 'remote-all':
-                 pixels = self.__get_data_remote(image_file_name)
-            elif self.cache_mode == 'remote-part':
-                 pixels = self.__get_data_lor(image_file_name)
-            else:
-                 print('ERROR: unknown "' + self.cache_mode + '" cache mode')
+            pixels = __get_data(image_file_name)
 
             # Store volume
             #pixels = np.rollaxis(pixels, 0, 3) # from 'channels_first' to 'channels_last'
