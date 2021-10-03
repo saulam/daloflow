@@ -31,13 +31,18 @@ from   data_generator import DataGenerator
 def do_cache(cache_path):
     # cache_path:
     cache_parts = cache_path.split(':')
-    if len(cache_parts) != 2:
-        return ''
+    if len(cache_parts) < 2:
+        return '', ''
 
     # param to choose if we want local copy or not
-    hdfs_dir  = cache_parts[0]
-    cache_dir = cache_parts[1]
-    hdfs_list = cache_dir + "/list.txt"
+    if len(cache_parts) == 2:
+       cache_mode = 'hdfs2local'    # TODO: 'hdfs2local' == 'hdfs2local-full' | 'hdfs2local-partial'
+       hdfs_dir   = cache_parts[0]
+       cache_dir  = cache_parts[1]
+    else:
+       cache_mode = cache_parts[0]
+       hdfs_dir   = cache_parts[1]
+       cache_dir  = cache_parts[2]
 
     # add the container name at the end cache_dir
     container_name = os.uname()[1]
@@ -46,9 +51,10 @@ def do_cache(cache_path):
     status = os.system("mkdir -p " + cache_dir)
     can_continue_with_cache = os.WIFEXITED(status) and (os.WEXITSTATUS(status) == 0)
     if not can_continue_with_cache:
-        return ''
+        return '', ''
 
     # list of files to copy in local
+    hdfs_list = cache_dir + "/list.txt"
     with open(hdfs_list, "w") as f:
         f.write('labels.p\n')
         for item in partition['train']:
@@ -57,13 +63,14 @@ def do_cache(cache_path):
         f.close()
 
     # copy from hdfs to local
-    status = os.system("hdfs/hdfs-cp.sh" + " " + "hdfs2local" + " "  + hdfs_dir + " " + hdfs_list + " " + cache_dir)
+    os_cmd = "hdfs/hdfs-cp.sh" + " " + cache_mode + " "  + hdfs_dir + " " + hdfs_list + " " + cache_dir
+    status = os.system(os_cmd)
     can_continue_with_cache = os.WIFEXITED(status) and (os.WEXITSTATUS(status) == 0)
     if not can_continue_with_cache:
-        return ''
+        return '', ''
 
-    # return cache_dir
-    return cache_dir
+    # return cache_mode, cache_dir
+    return cache_mode, cache_dir
 
 
 # do_read_lables: Read file data
@@ -115,10 +122,10 @@ os.environ["CUDA_VISIBLE_DEVICES"]="0,1"
 parser = argparse.ArgumentParser(description='Build dataset.')
 parser.add_argument('--height',  type=int, default=32,              nargs=1, required=False, help='an integer for the height')
 parser.add_argument('--width',   type=int, default=32,              nargs=1, required=False, help='an integer for the width')
-parser.add_argument('--path',    type=str, default='dataset32x32',  nargs=1, required=False, help='dataset path')
-parser.add_argument('--cache',   type=str, default='nocache',       nargs=1, required=False, help='dataset cache path')
 parser.add_argument('--convs',   type=int, default='1',             nargs=1, required=False, help='number of conv layers')
 parser.add_argument('--iters',   type=int, default='1000',          nargs=1, required=False, help='number of iterations per epoch')
+parser.add_argument('--path',    type=str, default='dataset32x32',  nargs=1, required=False, help='dataset path')
+parser.add_argument('--cache',   type=str, default='nocache',       nargs=1, required=False, help='dataset cache path')
 args = parser.parse_args()
 
 # configuration
@@ -128,17 +135,21 @@ convs            = int(args.convs[0])
 iters            = int(args.iters[0])
 images_path      = args.path[0]
 cache_path       = args.cache[0]
+cache_mode       = args.cache[0]
 channels         = 1
 batch_size       = 32
 shuffle          = True
 
 # train and validation params
-TRAIN_PARAMS = {'height':height,
-                'width':width,
-                'channels':channels,
-                'batch_size':32,
-                'images_uri':images_path,
-                'shuffle':shuffle}
+TRAIN_PARAMS = {
+                 'height':     height,
+                 'width':      width,
+                 'channels':   channels,
+                 'batch_size': 32,
+                 'cache_mode': cache_mode,
+                 'images_uri': images_path,
+                 'shuffle':    shuffle
+               }
 
 # resources
 hostname  = socket.gethostname()
@@ -154,9 +165,10 @@ nevents=len(list(labels_train.keys()))
 partition = {'train' : list(labels_train.keys()), 'validation' : list(labels_test.keys())}
 
 # Copy from hdfs to local
-cache_dir = do_cache(cache_path)
+cache_mode, cache_dir = do_cache(cache_path)
 if cache_dir != '':
     TRAIN_PARAMS['images_uri'] = cache_dir
+    TRAIN_PARAMS['cache_mode'] = cache_mode
 else:
     print("CACHE: cache from HDFS is not enabled.\n")
 
