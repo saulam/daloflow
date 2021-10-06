@@ -132,13 +132,13 @@ class DataGenerator(object):
         #print(' * image file name: ' + image_file_name)
 
         if   self.cache_mode == 'hdfs2local' or self.cache_mode == 'hdfs2local-full':
-             pixels = __get_data_local(image_file_name)
+             pixels = self.__get_data_local(image_file_name)
         elif self.cache_mode == 'nocache':
              pixels = self.__get_data_remote(image_file_name)
         elif self.cache_mode == 'hdfs2local-partial':
-             pixels = __get_data_local(image_file_name)
+             pixels = self.__get_data_local(image_file_name)
              if pixels == None:
-                pixels = __get_data_remote(image_file_name)
+                pixels = self.__get_data_remote(image_file_name)
         else:
              print('ERROR: unknown "' + self.cache_mode + '" cache mode')
 
@@ -162,7 +162,7 @@ class DataGenerator(object):
             image_file_name = self.images_path + '/'.join(ID.split('/')[1:]) + '.tar.gz'
 
             # Read image
-            pixels = __get_data(image_file_name)
+            pixels = self.__get_data(image_file_name)
 
             # Store volume
             #pixels = np.rollaxis(pixels, 0, 3) # from 'channels_first' to 'channels_last'
