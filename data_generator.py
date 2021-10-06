@@ -25,6 +25,7 @@ class DataGenerator(object):
     '''
     def __init__(self, height=28, width=28, channels=1, batch_size=32, cache_mode='', images_uri='/', shuffle=True):
         'Initialization'
+        self.debug       = False
         self.height      = height
         self.width       = width
         self.channels    = channels
@@ -32,7 +33,6 @@ class DataGenerator(object):
         self.shuffle     = shuffle
         self.cache_mode  = cache_mode
         self.images_uri  = images_uri
-
         o = urlparse(self.images_uri)
         if o.scheme == 'hdfs':
             self.images_path = o.path
@@ -40,7 +40,22 @@ class DataGenerator(object):
         else:
             self.images_path = images_uri
             self.client      = None
-        #print(' * image uri: ' + self.images_uri)
+
+    '''
+    Set debug mode True/False
+    '''
+    def set_debug(self, debug_mode):
+        'Do not show or show messages'
+        self.debug = debug_mode
+        if self.debug == True:
+           print(' * Debug mode:  ' + self.debug)
+           print(' * Height:      ' + self.height)
+           print(' * Width:       ' + self.width)
+           print(' * Channels:    ' + self.channels)
+           print(' * Batch_size:  ' + self.batch_size)
+           print(' * Shuffle:     ' + self.shuffle)
+           print(' * Cache mode:  ' + self.cache_mode)
+           print(' * Image uri:   ' + self.images_uri)
 
     '''
     Goes through the dataset and outputs one batch at a time.
@@ -94,7 +109,8 @@ class DataGenerator(object):
            with open(image_file_name, 'rb') as image_file:
                 pixels = np.fromstring(zlib.decompress(image_file.read()), dtype=np.uint8, sep='').reshape(self.height, self.width, self.channels)
         except:
-           print('Exception ' + str(sys.exc_info()[0]) + ' on file ' + image_file_name)
+           if self.debug == True:
+              print('Exception ' + str(sys.exc_info()[0]) + ' on file ' + image_file_name)
 
         return pixels
 
@@ -119,7 +135,8 @@ class DataGenerator(object):
                 else:
                    print('File ' + f['path'] + ' NOT copied because "' + str(f['error']) + '", sorry !')
         except:
-           print('Exception ' + str(sys.exc_info()[0]) + ' on file ' + image_file_name)
+           if self.debug == True:
+              print('Exception ' + str(sys.exc_info()[0]) + ' on file ' + image_file_name)
 
         return pixels
 
