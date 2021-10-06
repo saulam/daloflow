@@ -2,7 +2,7 @@
 This is the generator module.
 """
 
-__version__ = '1.2'
+__version__ = '1.5'
 __author__  = 'Saul Alonso-Monsalve'
 __email__   = "saul.alonso.monsalve@cern.ch"
 
@@ -23,13 +23,14 @@ class DataGenerator(object):
     '''
     Initialization function of the class
     '''
-    def __init__(self, height=28, width=28, channels=1, batch_size=32, images_uri = '/', shuffle=True):
+    def __init__(self, height=28, width=28, channels=1, batch_size=32, cache_mode='', images_uri='/', shuffle=True):
         'Initialization'
         self.height      = height
         self.width       = width
         self.channels    = channels
         self.batch_size  = batch_size
         self.shuffle     = shuffle
+        self.cache_mode  = cache_mode
         self.images_uri  = images_uri
 
         o = urlparse(self.images_uri)
@@ -81,6 +82,69 @@ class DataGenerator(object):
 
         return indexes
 
+
+    '''
+    Get data: local
+    '''
+    def __get_data_local(self, image_file_name):
+        'Get data from local file system path'
+        pixels = None
+
+        try:
+           with open(image_file_name, 'rb') as image_file:
+                pixels = np.fromstring(zlib.decompress(image_file.read()), dtype=np.uint8, sep='').reshape(self.height, self.width, self.channels)
+        except:
+           print('Exception ' + str(sys.exc_info()[0]) + ' on file ' + image_file_name)
+
+        return pixels
+
+    '''
+    Get data: remote
+    '''
+    def __get_data_remote(self, image_file_name):
+        'Get data from HDFS'
+        pixels = None
+        if self.client == None:
+           return pixels
+
+        try:
+           t = '/tmp/image.dat.' + str(os.getpid())
+           if os.path.exists(t):
+              os.remove(t)
+           for f in self.client.copyToLocal([image_file_name], t):
+                if f['result'] == True:
+                   with open(t, 'rb') as image_file:
+                        pixels = np.fromstring(zlib.decompress(image_file.read()), dtype=np.uint8, sep='').reshape(self.height, self.width, self.channels)
+                   os.remove(t)
+                else:
+                   print('File ' + f['path'] + ' NOT copied because "' + str(f['error']) + '", sorry !')
+        except:
+           print('Exception ' + str(sys.exc_info()[0]) + ' on file ' + image_file_name)
+
+        return pixels
+
+    '''
+    Get data: local or remote
+    '''
+    def __get_data(self, image_file_name):
+        'Get data: local or remote'
+        pixels = None
+        #print(' * image file name: ' + image_file_name)
+
+        if   self.cache_mode == 'hdfs2local' or self.cache_mode == 'hdfs2local-full':
+             pixels = __get_data_local(image_file_name)
+        elif self.cache_mode == 'nocache':
+             pixels = self.__get_data_remote(image_file_name)
+        elif self.cache_mode == 'hdfs2local-partial':
+             pixels = __get_data_local(image_file_name)
+             if pixels == None:
+                pixels = __get_data_remote(image_file_name)
+        else:
+             print('ERROR: unknown "' + self.cache_mode + '" cache mode')
+
+        return pixels
+
+
     '''
     Outputs batches of data and only needs to know about the list of IDs included
     in batches as well as their corresponding labels.
@@ -98,24 +162,7 @@ class DataGenerator(object):
             image_file_name = self.images_path + '/'.join(ID.split('/')[1:]) + '.tar.gz'
 
             # Read image
-            #print(' * image file name: ' + image_file_name)
-            try:
-              if self.client == None:
-                 with open(image_file_name, 'rb') as image_file:
-                     pixels = np.fromstring(zlib.decompress(image_file.read()), dtype=np.uint8, sep='').reshape(self.height, self.width, self.channels)
-              else:
-                 t = '/tmp/image.dat.' + str(os.getpid())
-                 if os.path.exists(t):
-                    os.remove(t)
-                 for f in self.client.copyToLocal([image_file_name], t):
-                      if f['result'] == True:
-                         with open(t, 'rb') as image_file:
-                              pixels = np.fromstring(zlib.decompress(image_file.read()), dtype=np.uint8, sep='').reshape(self.height, self.width, self.channels)
-                         os.remove(t)
-                      else:
-                         print('File ' + f['path'] + ' NOT copied because "' + str(f['error']) + '", sorry !')
-            except:
-              print('Exception ' + str(sys.exc_info()[0]) + ' on file ' + image_file_name)
+            pixels = __get_data(image_file_name)
 
             # Store volume
             #pixels = np.rollaxis(pixels, 0, 3) # from 'channels_first' to 'channels_last'
