@@ -32,11 +32,11 @@ def do_cache(cache_path):
     # cache_path:
     cache_parts = cache_path.split(':')
     if len(cache_parts) < 2:
-        return '', ''
+        return 'nocache', ''
 
     # param to choose if we want local copy or not
     if len(cache_parts) == 2:
-       cache_mode = 'hdfs2local'    # TODO: 'hdfs2local' == 'hdfs2local-full' | 'hdfs2local-partial'
+       cache_mode = 'hdfs2local'
        hdfs_dir   = cache_parts[0]
        cache_dir  = cache_parts[1]
     else:
