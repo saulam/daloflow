@@ -32,11 +32,11 @@ def do_cache(cache_path):
     # cache_path:
     cache_parts = cache_path.split(':')
     if len(cache_parts) < 2:
-        return '', ''
+        return 'nocache', ''
 
     # param to choose if we want local copy or not
     if len(cache_parts) == 2:
-       cache_mode = 'hdfs2local'    # TODO: 'hdfs2local' == 'hdfs2local-full' | 'hdfs2local-partial'
+       cache_mode = 'hdfs2local'
        hdfs_dir   = cache_parts[0]
        cache_dir  = cache_parts[1]
     else:
@@ -51,7 +51,7 @@ def do_cache(cache_path):
     status = os.system("mkdir -p " + cache_dir)
     can_continue_with_cache = os.WIFEXITED(status) and (os.WEXITSTATUS(status) == 0)
     if not can_continue_with_cache:
-        return '', ''
+        return 'nocache', ''
 
     # list of files to copy in local
     hdfs_list = cache_dir + "/list.txt"
@@ -67,7 +67,7 @@ def do_cache(cache_path):
     status = os.system(os_cmd)
     can_continue_with_cache = os.WIFEXITED(status) and (os.WEXITSTATUS(status) == 0)
     if not can_continue_with_cache:
-        return '', ''
+        return 'nocache', ''
 
     # return cache_mode, cache_dir
     return cache_mode, cache_dir
@@ -164,13 +164,11 @@ if labels_train == None:
 nevents=len(list(labels_train.keys()))
 partition = {'train' : list(labels_train.keys()), 'validation' : list(labels_test.keys())}
 
-# Copy from hdfs to local
+# do_cache: copy from hdfs to local or not...
 cache_mode, cache_dir = do_cache(cache_path)
-if cache_dir != '':
+TRAIN_PARAMS['cache_mode'] = cache_mode
+if cache_mode != 'nocache':
     TRAIN_PARAMS['images_uri'] = cache_dir
-    TRAIN_PARAMS['cache_mode'] = cache_mode
-else:
-    print("CACHE: cache from HDFS is not enabled.\n")
 
 '''
 ************** GENERATORS **************
