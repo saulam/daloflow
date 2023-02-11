@@ -18,7 +18,7 @@ SHELL ["/bin/bash", "-cu"]
 RUN apt-get update && apt-get install -y --allow-downgrades --allow-change-held-packages --no-install-recommends \
         build-essential \
         cmake \
-        g++-4.8 \
+        g++ \
         git \
         curl \
         vim \
@@ -105,7 +105,7 @@ RUN pip install tensorflow==${TENSORFLOW_VERSION} \
                 pandas \
                 mock \
                 enum34 \
-                sklearn \
+                scikit-learn \
                 future \
                 portpicker
 
