@@ -3,7 +3,7 @@
 
 
 #
-#  Copyright 2019-2021 Saul Alonso Monsalve, Felix Garcia Carballeira, Jose Rivadeneira Lopez-Bravo, Alejandro Calderon Mateos,
+#  Copyright 2019-2023 Saul Alonso Monsalve, Felix Garcia Carballeira, Jose Rivadeneira Lopez-Bravo, Alejandro Calderon Mateos,
 #
 #  This file is part of DaLoFlow.
 #
@@ -25,7 +25,7 @@
 daloflow_welcome ()
 {
 	echo ""
-	echo "  daloflow 3.9"
+	echo "  daloflow 4.0"
 	echo " --------------"
 	echo ""
 }
@@ -190,6 +190,9 @@ daloflow_start ()
             exit
         fi
 
+	# Make export directory
+        mkdir -p export
+
 	# Start container cluster (in single node)
 	docker-compose -f Dockercompose.yml up -d --scale node=$NC
 	if [ $? -gt 0 ]; then
@@ -229,6 +232,9 @@ daloflow_swarm_start ()
 	    echo ""
             exit
         fi
+
+	# Make export directory
+        mkdir -p export
 
         # Start container cluster
         docker stack deploy --compose-file Dockerstack.yml daloflow
